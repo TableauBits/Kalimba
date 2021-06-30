@@ -22,12 +22,7 @@ admin.initializeApp({
 });
 
 const app = express();
-// Setup CORS
-const corsOptions: cors.CorsOptions = {
-	origin: "http://localhost:4200",
-	optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
+app.use(cors());
 
 app.get("/:id", (req, res) => {
 	admin
