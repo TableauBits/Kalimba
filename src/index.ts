@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import express from "express";
 import * as admin from "firebase-admin";
+import cors from "cors";
 
 dotenv.config();
 
@@ -21,6 +22,13 @@ admin.initializeApp({
 });
 
 const app = express();
+// Setup CORS
+const corsOptions: cors.CorsOptions = {
+	origin: "http://localhost:4200",
+	optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
 app.get("/:id", (req, res) => {
 	admin
 		.auth()
