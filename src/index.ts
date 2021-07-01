@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 import express from "express";
 import * as admin from "firebase-admin";
 import cors from "cors";
-import { Server, } from "socket.io";
+import { Server } from "ws";
 
 dotenv.config();
 
@@ -35,10 +35,14 @@ const server = express()
 	})
 	.listen(port, () => console.log(`server listening on ${port}`));
 
-const io = new Server(server);
-io.on("connection", (socket) => {
-	console.log("client connected", socket);
-	socket.on("disconnect", () => console.log("clinet disconnected"));
+const wsServer = new Server({ server });
+wsServer.on("connection", (ws) => {
+	console.log("client connected");
+	ws.on("close", () => console.log("client disconnected"));
 });
+setInterval(() => {
+	wsServer.clients.forEach((client) => {
+		client.send(new Date().toTimeString());
+	});
+}, 1000);
 
-setInterval(() => io.emit("time", new Date().toTimeString()), 1000);
