@@ -7,7 +7,7 @@ import { Server, } from "socket.io";
 
 dotenv.config();
 
-const port = process.env.WSPORT || 3000;
+const port = process.env.PORT || 3000;
 let encryptedAdminSAK = process.env.MATBAY_SERVICE_ACCOUNT_KEY;
 
 if (encryptedAdminSAK == undefined) {
