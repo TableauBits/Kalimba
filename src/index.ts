@@ -7,8 +7,7 @@ import { Server, } from "socket.io";
 
 dotenv.config();
 
-const port = process.env.PORT || 3000;
-const wsPort = process.env.WSPORT || 3945;
+const port = process.env.WSPORT || 3000;
 let encryptedAdminSAK = process.env.MATBAY_SERVICE_ACCOUNT_KEY;
 
 if (encryptedAdminSAK == undefined) {
@@ -38,12 +37,7 @@ app.get("/auth/:id", (req, res) => {
 	res.send("lol sa merch pa");
 });
 
-app.listen(port, () => {
-	console.log("Server started");
-});
-
 const webSocketClient = new Server(httpServer);
-
 webSocketClient.on("connection", (socket) => {
 	console.log("a user connected");
 	socket.on("disconnect", () => {
@@ -53,4 +47,6 @@ webSocketClient.on("connection", (socket) => {
 		console.log("message: " + msg);
 	});
 });
-httpServer.listen(wsPort);
+httpServer.listen(port, () => {
+	console.log(`Server started, listening on port ${port}`);
+});
