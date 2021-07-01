@@ -3,7 +3,7 @@ import express from "express";
 import * as admin from "firebase-admin";
 import cors from "cors";
 import * as http from "http";
-import { Server } from "socket.io";
+import { Server, } from "socket.io";
 
 dotenv.config();
 
@@ -27,7 +27,7 @@ const app = express();
 app.use(cors());
 const httpServer = http.createServer(app);
 
-app.get("/:id", (req, res) => {
+app.get("/auth/:id", (req, res) => {
 	admin
 		.auth()
 		.verifyIdToken(req.params.id)
