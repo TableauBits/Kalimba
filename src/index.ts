@@ -42,7 +42,7 @@ wsServer.on("connection", (ws) => {
 });
 setInterval(() => {
 	wsServer.clients.forEach((client) => {
-		client.send(new Date().toTimeString());
+		client.emit("test", new Date().toTimeString());
 	});
 }, 1000);
 
