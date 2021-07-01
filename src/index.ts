@@ -2,6 +2,8 @@ import * as dotenv from "dotenv";
 import express from "express";
 import * as admin from "firebase-admin";
 import cors from "cors";
+import * as http from "http";
+import { Server } from "socket.io";
 
 dotenv.config();
 
@@ -23,6 +25,7 @@ admin.initializeApp({
 
 const app = express();
 app.use(cors());
+const httpServer = http.createServer(app);
 
 app.get("/:id", (req, res) => {
 	admin
@@ -36,4 +39,10 @@ app.get("/:id", (req, res) => {
 
 app.listen(port, () => {
 	console.log("Server started");
+});
+
+const webSocketClient = new Server(httpServer);
+
+webSocketClient.on("connection", (socket) => {
+	console.log("socket", socket);
 });
