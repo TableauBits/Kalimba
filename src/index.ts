@@ -25,11 +25,6 @@ admin.initializeApp({
 const server = express()
 	.use(cors())
 	.get("/auth/:id", (req, res) => {
-		admin
-			.auth()
-			.verifyIdToken(req.params.id)
-			.then(decodedToken => console.log(decodedToken.uid))
-			.catch(reason => console.log(reason));
 
 		res.send("lol sa merch");
 	})
@@ -39,10 +34,12 @@ const wsServer = new Server({ server });
 wsServer.on("connection", (ws) => {
 	console.log("client connected");
 	ws.on("close", () => console.log("client disconnected"));
+	ws.onmessage = (message) => {
+		admin
+			.auth()
+			.verifyIdToken(message.data.toString())
+			.then(decodedToken => console.log(decodedToken.uid))
+			.catch(reason => console.log(reason));
+	};
 });
-setInterval(() => {
-	wsServer.clients.forEach((client) => {
-		client.emit("test", new Date().toTimeString());
-	});
-}, 1000);
 
