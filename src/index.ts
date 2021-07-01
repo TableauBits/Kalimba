@@ -8,6 +8,7 @@ import { Server, } from "socket.io";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
+const wsPort = process.env.WSPORT || 3945;
 let encryptedAdminSAK = process.env.MATBAY_SERVICE_ACCOUNT_KEY;
 
 if (encryptedAdminSAK == undefined) {
@@ -44,5 +45,9 @@ app.listen(port, () => {
 const webSocketClient = new Server(httpServer);
 
 webSocketClient.on("connection", (socket) => {
-	console.log("socket", socket);
+	console.log("a user connected");
+	socket.on("disconnect", () => {
+		console.log("user disconnected");
+	});
 });
+httpServer.listen(wsPort);
