@@ -16,18 +16,18 @@ export function authenticateWS(ws: WebSocket): void {
 		admin
 			.auth()
 			.verifyIdToken(message.data)
-			.then((value) => {
+			.then((idToken) => {
 				const newClient: Client = {
 					socket: ws,
 					firebaseJWT: message.data,
-					uid: value.uid,
+					uid: idToken.uid,
 				};
 				clients.push(newClient);
 				console.log("New client authenticated: ", newClient);
 				ws.onmessage = createListeners;
 				const response: ResponseStatus = {
 					success: true,
-					status: `Successfully authenticated as ${value.email}`
+					status: idToken.uid
 				};
 				ws.send(response);
 			})
