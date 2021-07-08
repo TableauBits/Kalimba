@@ -25,7 +25,7 @@ idToken = auth.sign_in_with_email_and_password("bidonman@gmail.com", "bidonman")
 async def connect():
     uri = "ws://localhost:3000"
     async with websockets.connect(uri) as websocket:
-        await websocket.send(json.dumps({"event": "CLIENT-authenticate", "data": idToken}))
+        await websocket.send(json.dumps({"event": "CLIENT-authenticate", "data": {"idToken": idToken}}))
         print(f"authentication response: {await websocket.recv()}")
 
         while True:
