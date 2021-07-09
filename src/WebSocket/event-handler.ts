@@ -4,10 +4,14 @@ import { EventTypes, Message, ResponseStatus } from "../Types/common";
 import { auth } from "./firebase";
 import { Module } from "./module";
 import { UserModule } from "./modules/user";
-import { createMessage } from "./utility";
+import { createMessage, extractMessageData } from "./utility";
 
 const modules: Module[] = [new UserModule()];
 const clients: Client[] = [];
+
+interface ReqAuthenticate {
+	idToken: string;
+}
 
 export function setupWS(ws: WebSocket): void {
 	ws.onmessage = async (event) => {
@@ -16,8 +20,9 @@ export function setupWS(ws: WebSocket): void {
 			console.warn(`WS event receieved before authentication! Event ${event.data.toString()} ignored...`);
 			return;
 		}
+		const token = extractMessageData<ReqAuthenticate>(message).idToken;
 		auth
-			.verifyIdToken(message.data)
+			.verifyIdToken(token)
 			.then((idToken) => {
 				const newClient: Client = {
 					socket: ws,
