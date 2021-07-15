@@ -8,10 +8,19 @@ export interface ResponseStatus {
 	status: string;
 }
 
+export interface User {
+	uid: string;
+	email: string;
+	displayName: string;
+	photoURL: string;
+	roles: string[];
+}
+
 export enum EventTypes {
 	CLIENT_authenticate = "CLIENT-authenticate",
 	USER_get_one = "USER-get-one",
 	USER_get_many = "USER-get-many",
 	USER_get_all = "USER-get-all",
 	USER_edit = "USER-edit",
+	USER_create = "USER-create",
 }
