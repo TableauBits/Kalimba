@@ -17,4 +17,3 @@ wsServer.on("connection", (ws) => {
 	ws.on("close", () => console.log("client disconnected"));
 	setupWS(ws);
 });
-
