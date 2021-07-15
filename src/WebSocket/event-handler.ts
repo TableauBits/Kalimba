@@ -96,6 +96,9 @@ function handleEvents(event: WebSocket.MessageEvent): void {
 		console.warn(`Event received for unregistered client (${event.target})!`);
 		return;
 	}
+	if (message.event.startsWith("CLIENT")) {
+		return;
+	}
 
 	delegateToModules(message, client);
 }
