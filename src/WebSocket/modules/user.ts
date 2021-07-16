@@ -1,3 +1,4 @@
+import { isEmpty, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { EventTypes, Message, ResponseStatus, User } from "../../Types/common";
 import { firestore } from "../firebase";
@@ -6,70 +7,75 @@ import { createMessage, extractMessageData } from "../utility";
 
 const FS_USERS_PATH = "users/";
 
-interface ReqGetOne {
-	uid: string;
-}
-interface ReqGetMany {
+interface ReqGet {
 	uids: string[];
 }
 interface ReqEdit {
 	userData: User;
 }
 
-interface ResGetOne {
-	userInfo: User
-}
-interface ResGetMany {
-	userInfos: User[]
+interface ResGet {
+	userInfos: User[];
 }
 interface ResGetAll {
-	userInfos: User[]
+	userInfos: User[];
 }
 interface ResEdit {
-	response: ResponseStatus
+	response: ResponseStatus;
+}
+interface ResUpdate {
+	userInfo: User;
 }
 
+interface SubscriptionData {
+	clients: Client[];
+	unsubscribe: () => void;
+}
 
 export class UserModule extends Module {
 
 	public prefix = "USER";
+	private subscriptions: Map<string, SubscriptionData> = new Map();
 
 	constructor() {
 		super();
-		this.moduleMap.set(EventTypes.USER_get_one, this.getOne);
-		this.moduleMap.set(EventTypes.USER_get_many, this.getMany);
+		this.moduleMap.set(EventTypes.USER_get, this.get);
 		this.moduleMap.set(EventTypes.USER_get_all, this.getAll);
 		this.moduleMap.set(EventTypes.USER_edit, this.edit);
 		this.moduleMap.set(EventTypes.USER_create, this.create);
 	}
 
-	private async getOne(message: Message<unknown>, _: Client): Promise<string> {
-		const uid = extractMessageData<ReqGetOne>(message).uid;
-
-		const document = await firestore.collection(FS_USERS_PATH).doc(uid).get();
-		if (!document.exists) {
-			throw new Error(`User with userid ${uid} does not exist!`);
-		}
-		return createMessage<ResGetOne>(EventTypes.USER_get_one, { userInfo: document.data() as User });
-	}
-
-	private async getMany(message: Message<unknown>, _: Client): Promise<string> {
-		const uids = extractMessageData<ReqGetMany>(message).uids;
-
+	private async get(message: Message<unknown>, client: Client): Promise<string> {
+		const uids = extractMessageData<ReqGet>(message).uids;
 		const references: FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData>[] = [];
 		const userCollection = firestore.collection(FS_USERS_PATH);
 		for (const uid of uids) {
 			references.push(userCollection.doc(uid));
+			if (!this.subscriptions.has(uid)) {
+				this.subscriptions.set(uid, { clients: [client], unsubscribe: () => { return; } });
+				const subData = this.subscriptions.get(uid);
+				if (!isNil(subData)) {
+					const unsubscribe = firestore.collection(FS_USERS_PATH).doc(uid).onSnapshot((doc) => {
+						subData.clients.forEach((client) => {
+							console.log("sending update...");
+							client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: doc.data() as User }));
+						});
+					});
+					subData.unsubscribe = unsubscribe;
+				}
+			} else {
+				this.subscriptions.get(uid)?.clients.push(client);
+			}
 		}
 
 		const userDatas: User[] = [];
 		const documents = await firestore.getAll(...references);
 		for (const document of documents) {
-			if (!document.exists)
-				continue;
+			if (!document.exists) continue;
 			userDatas.push(document.data() as User);
 		}
-		return createMessage<ResGetMany>(EventTypes.USER_get_many, { userInfos: userDatas });
+
+		return createMessage<ResGet>(EventTypes.USER_get, { userInfos: userDatas });
 	}
 
 	private async getAll(_m: Message<unknown>, _c: Client): Promise<string> {
@@ -122,7 +128,18 @@ export class UserModule extends Module {
 			return false;
 		}
 
-		client.socket.send(await eventCallback(message, client));
+		client.socket.send(await eventCallback.apply(this, [message, client]));
 		return true;
+	}
+
+	public onClose(client: Client): void {
+		this.subscriptions.forEach((subData: SubscriptionData, uid: string) => {
+			const index = subData.clients.findIndex((c) => c === client);
+			if (index > 0) subData.clients.splice(index, 1);
+			if (isEmpty(subData.clients)) {
+				subData.unsubscribe();
+				this.subscriptions.delete(uid);
+			}
+		});
 	}
 }

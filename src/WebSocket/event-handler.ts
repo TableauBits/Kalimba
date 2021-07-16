@@ -1,3 +1,4 @@
+import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
 import { EventTypes, Message, ResponseStatus } from "../Types/common";
@@ -56,6 +57,10 @@ function onClose(event: WebSocket.CloseEvent): void {
 	const clientIndex = clients.findIndex((candidate) => candidate.socket === event.target);
 	if (clientIndex === -1) {
 		console.error("Could not remove client from list!");
+	}
+	const client = clients[clientIndex];
+	for (const module of modules) {
+		if (!isNil(client)) module.onClose(client);
 	}
 	clients.splice(clientIndex, 1);
 }

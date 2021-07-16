@@ -19,9 +19,9 @@ export interface User {
 export enum EventTypes {
 	CLIENT_authenticate = "CLIENT-authenticate",
 	CLIENT_ping = "CLIENT-ping",
-	USER_get_one = "USER-get-one",
-	USER_get_many = "USER-get-many",
+	USER_get = "USER-get",
 	USER_get_all = "USER-get-all",
+	USER_update = "USER-update",
 	USER_edit = "USER-edit",
 	USER_create = "USER-create",
 }
