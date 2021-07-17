@@ -114,3 +114,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+## Rust
+tests/manual-testing/tine/debug
+tests/manual-testing/tine/target
+tests/manual-testing/tine/Cargo.lock

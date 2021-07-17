@@ -1,3 +1,4 @@
+import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
 import { EventTypes, Message, ResponseStatus } from "../Types/common";
@@ -13,11 +14,22 @@ interface ReqAuthenticate {
 	idToken: string;
 }
 
+function decodeMessage<T>(eventData: string): Message<T> | undefined {
+	try {
+		return JSON.parse(eventData) as Message<T>;
+	} catch (error: unknown) {
+		console.error("Could not parse event", eventData);
+		return;
+	}
+}
+
 export function setupWS(ws: WebSocket): void {
 	ws.onmessage = async (event) => {
-		const message = JSON.parse(event.data.toString()) as Message<string>;
+		console.log("EVENT ", event.data.toString());
+		const message = decodeMessage<string>(event.data.toString());
+		if (isNil(message)) return;
 		if (message.event !== EventTypes.CLIENT_authenticate) {
-			console.warn(`WS event receieved before authentication! Event ${event.data.toString()} ignored...`);
+			console.warn("WS event receieved before authentication! Event", event.data.toString(), "ignored...");
 			return;
 		}
 		const token = extractMessageData<ReqAuthenticate>(message).idToken;
@@ -57,6 +69,10 @@ function onClose(event: WebSocket.CloseEvent): void {
 	if (clientIndex === -1) {
 		console.error("Could not remove client from list!");
 	}
+	const client = clients[clientIndex];
+	for (const module of modules) {
+		if (!isNil(client)) module.onClose(client);
+	}
 	clients.splice(clientIndex, 1);
 }
 
@@ -84,13 +100,8 @@ async function delegateToModules(message: Message<unknown>, client: Client) {
 }
 
 function handleEvents(event: WebSocket.MessageEvent): void {
-	let message: Message<unknown>;
-	try {
-		message = JSON.parse(event.data.toString()) as Message<unknown>;
-	} catch (error: unknown) {
-		console.error(`Could not parse event (${event})!`);
-		return;
-	}
+	const message = decodeMessage(event.data.toString());
+	if (isNil(message)) return;
 	const client = clients.find((candidate) => candidate.socket === event.target);
 	if (client === undefined) {
 		console.warn(`Event received for unregistered client (${event.target})!`);
