@@ -2,7 +2,7 @@ import { Client } from "../Types/client";
 import { Message } from "../Types/common";
 
 export type moduleFunction = {
-	(message: Message<unknown>, client: Client): Promise<string>
+	(message: Message<unknown>, client: Client): Promise<void>
 }
 
 export abstract class Module {
