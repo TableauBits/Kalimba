@@ -3,7 +3,7 @@ import { Client } from "../../Types/client";
 import { EventTypes, Message, User } from "../../Types/common";
 import { firestore } from "../firebase";
 import { Module } from "../module";
-import { createMessage, extractMessageData } from "../utility";
+import { createMessage, extractMessageData, removeFromArray } from "../utility";
 
 const FS_USERS_PATH = "users/";
 
@@ -19,64 +19,71 @@ interface ResUpdate {
 }
 
 interface SubscriptionData {
-	clients: Client[];
-	unsubscribe: () => void;
+	userData: User;
+	listeners: Client[];
 }
 
 export class UserModule extends Module {
 
 	public prefix = "USER";
 	private subscriptions: Map<string, SubscriptionData> = new Map();
+	private allUsersListener: Client[] = [];
 
 	constructor() {
 		super();
 		this.moduleMap.set(EventTypes.USER_get, this.get);
 		this.moduleMap.set(EventTypes.USER_get_all, this.getAll);
 		this.moduleMap.set(EventTypes.USER_edit, this.edit);
-		this.moduleMap.set(EventTypes.USER_create, this.create);
-	}
+		this.moduleMap.set(EventTypes.USER_create, this.edit);
 
-	private async subscribeToUIDs(uids: string[], client: Client): Promise<void> {
-		const userCollection = firestore.collection(FS_USERS_PATH);
-		for (const uid of uids) {
-			// Check if requested user exists in DB
-			const userDoc = await userCollection.doc(uid).get();
-			if (!userDoc.exists || isNil(uid)) continue;
+		firestore.collection(FS_USERS_PATH).onSnapshot((collection) => {
+			for (const change of collection.docChanges()) {
+				const userData = change.doc.data() as User;
+				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: userData });
+				switch (change.type) {
+					case "added":
+						this.subscriptions.set(userData.uid, { userData: userData, listeners: [...this.allUsersListener] });
+						for (const listener of this.allUsersListener) {
+							listener.socket.send(updateMessage);
+						}
+						break;
 
-			// Check if user already has clients listening for it's changes
-			if (!this.subscriptions.has(uid)) {
-				// New listener: Firestore automatically sends initial data through an update
-				this.subscriptions.set(uid, { clients: [client], unsubscribe: () => { return; } });
-				const subData = this.subscriptions.get(uid);
-				if (!isNil(subData)) {
-					const unsubscribe = firestore.collection(FS_USERS_PATH).doc(uid).onSnapshot((doc) => {
-						console.log("update received for USER", uid, "sending to", subData.clients.length, "clients.");
-						subData.clients.forEach((client) => {
-							client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: doc.data() as User }));
-						});
-					});
-					subData.unsubscribe = unsubscribe;
+					case "removed":
+						// @TODO(Ithyx): Send deletion event (or something idk)
+						this.subscriptions.delete(userData.uid);
+						break;
+
+					case "modified": {
+						const listeners = this.subscriptions.get(userData.uid)?.listeners || [];
+						for (const listener of listeners) {
+							listener.socket.send(updateMessage);
+						}
+					} break;
 				}
-			} else {
-				// Already existing listener: we need to replicate firestore's initial update
-				this.subscriptions.get(uid)?.clients.push(client);
-				client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: userDoc.data() as User }));
-				console.log("sending fake initial update from uid", uid);
 			}
-		}
+		});
 	}
 
 	private async get(message: Message<unknown>, client: Client): Promise<void> {
 		const uids = extractMessageData<ReqGet>(message).uids;
-		this.subscribeToUIDs(uids, client);
+		for (const uid of uids) {
+			const localData = this.subscriptions.get(uid);
+			if (isNil(localData)) continue;
+
+			localData.listeners.push(client);
+			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: localData.userData }));
+		}
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
-		const uids: string[] = [];
-		(await firestore.collection(FS_USERS_PATH).get()).forEach((userDoc) => {
-			uids.push((userDoc.data() as User).uid);
+		this.allUsersListener.push(client);
+		this.subscriptions.forEach((subscription) => {
+			subscription.listeners.push(client);
 		});
-		this.subscribeToUIDs(uids, client);
+
+		this.subscriptions.forEach((subscription) => {
+			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: subscription.userData }));
+		});
 	}
 
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
@@ -86,10 +93,6 @@ export class UserModule extends Module {
 		}
 
 		firestore.collection(FS_USERS_PATH).doc(user.uid).set(user, { merge: true });
-	}
-
-	private async create(message: Message<unknown>, client: Client): Promise<void> {
-		this.edit(message, client);
 	}
 
 	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
@@ -104,8 +107,8 @@ export class UserModule extends Module {
 
 	public onClose(client: Client): void {
 		this.subscriptions.forEach((subData: SubscriptionData) => {
-			const index = subData.clients.findIndex((c) => c === client);
-			if (index > 0) subData.clients.splice(index, 1);
+			removeFromArray(client, subData.listeners);
 		});
+		removeFromArray(client, this.allUsersListener);
 	}
 }
