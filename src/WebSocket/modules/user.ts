@@ -54,8 +54,10 @@ export class UserModule extends Module {
 						break;
 
 					case "modified": {
-						const listeners = this.subscriptions.get(userData.uid)?.listeners || [];
-						for (const listener of listeners) {
+						const localData = this.subscriptions.get(userData.uid);
+						if (isNil(localData)) return;
+						localData.userData = userData;
+						for (const listener of localData.listeners) {
 							listener.socket.send(updateMessage);
 						}
 					} break;

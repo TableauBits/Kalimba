@@ -122,8 +122,11 @@ fn setup_ws(id_token: &str) {
 						}
 					}
 				}
+				OwnedMessage::Text(text) => {
+					println!("\n<< {:?}", text)
+				}
 				// Say what we received
-				_ => println!("<< {:?}", message),
+				_ => println!("\n<< {:?}", message),
 			}
 		}
 	});
@@ -161,7 +164,7 @@ fn setup_ws(id_token: &str) {
 			_ => {
 				let message_string =
 					format!(r#"{{"event":"{}","data":{}}}"#, trimmed_event, trimmed_data);
-				println!(">> {}", message_string);
+				println!("\n>> {}", message_string);
 				OwnedMessage::Text(message_string)
 			}
 		};
