@@ -14,6 +14,7 @@ export interface User {
 	displayName: string;
 	photoURL: string;
 	roles: string[];
+	description: string;
 }
 
 export enum EventTypes {

@@ -94,6 +94,14 @@ export class UserModule extends Module {
 			return;
 		}
 
+		// Remove empty lines and limit username to 25 chars
+		user.displayName.replace(/^\s*\n/gm, "");
+		user.displayName = user.displayName.substring(0, Math.min(user.displayName.length, 25));
+
+		// Remove empty lines and limit description to 140 chars
+		user.description.replace(/^\s*\n/gm, "");
+		user.description = user.description.substring(0, Math.min(user.description.length, 140));
+
 		firestore.collection(FS_USERS_PATH).doc(user.uid).set(user, { merge: true });
 	}
 
