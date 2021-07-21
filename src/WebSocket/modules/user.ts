@@ -98,13 +98,16 @@ export class UserModule extends Module {
 			return;
 		}
 
+		const DISPLAY_NAME_MAX_LENGTH = 25;
+		const DESCRIPTION_MAX_LENGTH = 140;
+
 		// Remove empty lines and limit username to 25 chars
 		user.displayName.replace(/^\s*\n/gm, "");
-		user.displayName = user.displayName.substring(0, Math.min(user.displayName.length, 25));
+		user.displayName = user.displayName.substring(0, Math.min(user.displayName.length, DISPLAY_NAME_MAX_LENGTH));
 
 		// Remove empty lines and limit description to 140 chars
 		user.description.replace(/^\s*\n/gm, "");
-		user.description = user.description.substring(0, Math.min(user.description.length, 140));
+		user.description = user.description.substring(0, Math.min(user.description.length, DESCRIPTION_MAX_LENGTH));
 
 		firestore.collection(FS_USERS_PATH).doc(user.uid).set(user, { merge: true });
 	}
