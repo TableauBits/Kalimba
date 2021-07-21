@@ -10,5 +10,5 @@ export function extractMessageData<T>(message: Message<unknown>): T {
 
 export function removeFromArray<T>(element: T, array: T[]): void {
 	const index = array.findIndex((e) => e === element);
-	if (index > 0) array.splice(index, 1);
+	if (index >= 0) array.splice(index, 1);
 }

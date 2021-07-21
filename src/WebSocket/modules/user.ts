@@ -13,6 +13,9 @@ interface ReqGet {
 interface ReqEdit {
 	userData: User;
 }
+interface ReqUnsubscribe {
+	uids: string[];
+}
 
 interface ResUpdate {
 	userInfo: User;
@@ -35,6 +38,7 @@ export class UserModule extends Module {
 		this.moduleMap.set(EventTypes.USER_get_all, this.getAll);
 		this.moduleMap.set(EventTypes.USER_edit, this.edit);
 		this.moduleMap.set(EventTypes.USER_create, this.edit);
+		this.moduleMap.set(EventTypes.USER_unsubscribe, this.unsubscribe);
 
 		firestore.collection(FS_USERS_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
@@ -103,6 +107,16 @@ export class UserModule extends Module {
 		user.description = user.description.substring(0, Math.min(user.description.length, 140));
 
 		firestore.collection(FS_USERS_PATH).doc(user.uid).set(user, { merge: true });
+	}
+
+	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
+		const uids = extractMessageData<ReqUnsubscribe>(message).uids;
+		for (const uid of uids) {
+			const localData = this.subscriptions.get(uid);
+			if (isNil(localData)) continue;
+
+			removeFromArray(client, localData.listeners);
+		}
 	}
 
 	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
