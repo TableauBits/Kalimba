@@ -25,7 +25,6 @@ function decodeMessage<T>(eventData: string): Message<T> | undefined {
 
 export function setupWS(ws: WebSocket): void {
 	ws.onmessage = async (event) => {
-		console.log("EVENT ", event.data.toString());
 		const message = decodeMessage<string>(event.data.toString());
 		if (isNil(message)) return;
 		if (message.event !== EventTypes.CLIENT_authenticate) {
