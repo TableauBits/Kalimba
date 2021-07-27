@@ -3,7 +3,7 @@ import { Client } from "../../Types/client";
 import { EventTypes, Message, User } from "../../Types/common";
 import { firestore } from "../firebase";
 import { Module } from "../module";
-import { createMessage, extractMessageData, removeFromArray } from "../utility";
+import { createMessage, extractMessageData } from "../utility";
 
 const FS_USERS_PATH = "users/";
 
@@ -23,14 +23,14 @@ interface ResUpdate {
 
 interface SubscriptionData {
 	userData: User;
-	listeners: Client[];
+	listeners: Set<Client>;
 }
 
 export class UserModule extends Module {
 
 	public prefix = "USER";
 	private subscriptions: Map<string, SubscriptionData> = new Map();
-	private allUsersListener: Client[] = [];
+	private allUsersListener: Set<Client> = new Set();
 
 	constructor() {
 		super();
@@ -46,10 +46,10 @@ export class UserModule extends Module {
 				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: userData });
 				switch (change.type) {
 					case "added":
-						this.subscriptions.set(userData.uid, { userData: userData, listeners: [...this.allUsersListener] });
-						for (const listener of this.allUsersListener) {
+						this.subscriptions.set(userData.uid, { userData: userData, listeners: new Set(this.allUsersListener) });
+						this.allUsersListener.forEach((listener) => {
 							listener.socket.send(updateMessage);
-						}
+						});
 						break;
 
 					case "removed":
@@ -61,9 +61,9 @@ export class UserModule extends Module {
 						const localData = this.subscriptions.get(userData.uid);
 						if (isNil(localData)) return;
 						localData.userData = userData;
-						for (const listener of localData.listeners) {
+						localData.listeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
-						}
+						});
 					} break;
 				}
 			}
@@ -76,15 +76,15 @@ export class UserModule extends Module {
 			const localData = this.subscriptions.get(uid);
 			if (isNil(localData)) continue;
 
-			localData.listeners.push(client);
+			localData.listeners.add(client);
 			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: localData.userData }));
 		}
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
-		this.allUsersListener.push(client);
+		this.allUsersListener.add(client);
 		this.subscriptions.forEach((subscription) => {
-			subscription.listeners.push(client);
+			subscription.listeners.add(client);
 		});
 
 		this.subscriptions.forEach((subscription) => {
@@ -118,7 +118,7 @@ export class UserModule extends Module {
 			const localData = this.subscriptions.get(uid);
 			if (isNil(localData)) continue;
 
-			removeFromArray(client, localData.listeners);
+			localData.listeners.delete(client);
 		}
 	}
 
@@ -134,8 +134,8 @@ export class UserModule extends Module {
 
 	public onClose(client: Client): void {
 		this.subscriptions.forEach((subData: SubscriptionData) => {
-			removeFromArray(client, subData.listeners);
+			subData.listeners.delete(client);
 		});
-		removeFromArray(client, this.allUsersListener);
+		this.allUsersListener.delete(client);
 	}
 }
