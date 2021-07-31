@@ -8,13 +8,46 @@ export interface ResponseStatus {
 	status: string;
 }
 
+export enum Roles {
+	ADMIN = "admin",
+	DEV = "dev",
+	MEMBER = "member",
+	TEST = "test",
+}
+
 export interface User {
 	uid: string;
 	email: string;
 	displayName: string;
 	photoURL: string;
-	roles: string[];
+	roles: Roles[];
 	description: string;
+}
+
+export enum ConstitutionType {
+	GRADE,
+	LENGTH,
+}
+
+// TODO : Better names ?
+export enum AnonymousLevel {
+	PUBLIC,
+	NO_USERNAME,
+	SOUND_ONLY
+}
+
+export interface Constitution {
+	id: string;
+	season: number;
+	part: number;
+	name: string;
+	isPublic: boolean;
+	anonymousLevel: AnonymousLevel;
+	type: ConstitutionType;
+	state: number;
+
+	users: string[]; // user[0] est le président
+	numberOfSongsPerUser: number;
 }
 
 export enum EventTypes {
@@ -28,6 +61,12 @@ export enum EventTypes {
 	USER_create = "USER-create",
 	USER_unsubscribe = "USER-unsubscribe",
 
+	CST_get = "CST-get",
+	CST_get_from_user = "CST-get-from-user",
+	CST_create = "CST-create",
+	CST_unsubscribe = "CST-unsubscribe",
+
 	// From server
 	USER_update = "USER-update",
+	CST_update = "CST-update",
 }

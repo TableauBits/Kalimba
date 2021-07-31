@@ -19,3 +19,7 @@ admin.initializeApp({
 
 export const auth = admin.auth();
 export const firestore = admin.firestore();
+
+export function createID(): string {
+	return firestore.collection("persona5").doc().id;
+}

@@ -4,10 +4,11 @@ import { Client } from "../Types/client";
 import { EventTypes, Message, ResponseStatus } from "../Types/common";
 import { auth } from "./firebase";
 import { Module } from "./module";
+import { ConstitutionModule } from "./modules/constitution";
 import { UserModule } from "./modules/user";
 import { createMessage, extractMessageData } from "./utility";
 
-const modules: Module[] = [new UserModule()];
+const modules: Module[] = [new UserModule(), new ConstitutionModule()];
 const clients: Client[] = [];
 
 interface ReqAuthenticate {
