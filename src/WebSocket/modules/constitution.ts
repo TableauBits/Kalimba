@@ -47,7 +47,7 @@ export class ConstitutionModule extends Module {
 		firestore.collection(FS_CONSTITUTION_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newConstitutionData = change.doc.data() as Constitution;
-				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { cstInfo: newConstitutionData });
+				const updateMessage = createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: newConstitutionData });
 				switch (change.type) {
 					case "added": {
 						const newListeners: Set<Client> = new Set(this.allConstitutionsListener);
@@ -113,6 +113,7 @@ export class ConstitutionModule extends Module {
 		// A user can create a constitution if they are admin
 		if (isNil(user) || !user.data.roles.includes(Roles.ADMIN)) return;
 		if (requestData.type ?? ConstitutionTypes.LENGTH >= ConstitutionTypes.LENGTH) return;
+		if (isNil(requestData.playlistLink)) return;
 
 		const NAME_MAX_LENGTH = 30;
 
@@ -125,7 +126,9 @@ export class ConstitutionModule extends Module {
 			anonymousLevel: requestData.anonymousLevel ?? 0,
 			type: requestData.type ?? ConstitutionTypes.GRADE,
 			state: 0,
+			playlistLink: requestData.playlistLink,
 			users: [client.uid],
+			maxUserCount: clamp(requestData.maxUserCount ?? 1, 1, 10),
 			numberOfSongsPerUser: clamp(requestData.numberOfSongsPerUser ?? 1, 1, 25),
 		};
 

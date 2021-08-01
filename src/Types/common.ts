@@ -45,8 +45,10 @@ export interface Constitution {
 	anonymousLevel: AnonymousLevel;
 	type: ConstitutionType;
 	state: number;
+	playlistLink: string;
 
 	users: string[]; // user[0] est le président
+	maxUserCount: number;
 	numberOfSongsPerUser: number;
 }
 
