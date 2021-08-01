@@ -64,6 +64,7 @@ export enum EventTypes {
 	CST_get = "CST-get",
 	CST_get_from_user = "CST-get-from-user",
 	CST_create = "CST-create",
+	CST_join = "CST-join",
 	CST_unsubscribe = "CST-unsubscribe",
 
 	// From server

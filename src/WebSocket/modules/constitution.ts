@@ -1,7 +1,7 @@
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { Constitution, ConstitutionType as ConstitutionTypes, EventTypes, Message, Roles } from "../../Types/common";
-import { createID, firestore } from "../firebase";
+import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage, extractMessageData } from "../utility";
 import { users } from "./user";
@@ -14,6 +14,9 @@ interface ReqGet {
 interface ReqCreate {
 	cstData: Constitution;
 }
+interface ReqJoin {
+	id: string;
+}
 interface ReqUnsubscribe {
 	ids: string[];
 }
@@ -23,7 +26,7 @@ interface ResUpdate {
 }
 
 interface SubscriptionData {
-	constitutionData: Constitution;
+	data: Constitution;
 	listeners: Set<Client>;
 }
 
@@ -38,6 +41,7 @@ export class ConstitutionModule extends Module {
 		this.moduleMap.set(EventTypes.CST_get, this.get);
 		this.moduleMap.set(EventTypes.CST_get_from_user, this.getFromUser);
 		this.moduleMap.set(EventTypes.CST_create, this.create);
+		this.moduleMap.set(EventTypes.CST_join, this.join);
 		this.moduleMap.set(EventTypes.CST_unsubscribe, this.unsubscribe);
 
 		firestore.collection(FS_CONSTITUTION_PATH).onSnapshot((collection) => {
@@ -52,7 +56,7 @@ export class ConstitutionModule extends Module {
 							newListeners.add(pendingListener);
 							this.pendingListens.delete(newConstitutionData.id);
 						}
-						this.constitutions.set(newConstitutionData.id, { constitutionData: newConstitutionData, listeners: newListeners });
+						this.constitutions.set(newConstitutionData.id, { data: newConstitutionData, listeners: newListeners });
 						newListeners.forEach((listener) => {
 							listener.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: newConstitutionData }));
 						});
@@ -66,7 +70,7 @@ export class ConstitutionModule extends Module {
 					case "modified": {
 						const constitution = this.constitutions.get(newConstitutionData.id);
 						if (isNil(constitution)) return;
-						constitution.constitutionData = newConstitutionData;
+						constitution.data = newConstitutionData;
 						constitution.listeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
 						});
@@ -83,7 +87,7 @@ export class ConstitutionModule extends Module {
 			if (isNil(constitution)) continue;
 
 			constitution.listeners.add(client);
-			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { cstInfo: constitution.constitutionData }));
+			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { cstInfo: constitution.data }));
 		}
 	}
 
@@ -93,10 +97,10 @@ export class ConstitutionModule extends Module {
 		//  * constitutions they are already a member of
 
 		this.constitutions.forEach((constitution) => {
-			const { isPublic, users } = constitution.constitutionData;
+			const { isPublic, users } = constitution.data;
 			if (isPublic || users.includes(client.uid)) {
 				constitution.listeners.add(client);
-				client.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: constitution.constitutionData }));
+				client.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: constitution.data }));
 			}
 		});
 	}
@@ -127,7 +131,14 @@ export class ConstitutionModule extends Module {
 
 		this.pendingListens.set(constitution.id, client);
 
-		firestore.collection(FS_CONSTITUTION_PATH).doc(constitution.id).set(constitution, { merge: false });
+		firestore.collection(FS_CONSTITUTION_PATH).doc(constitution.id).create(constitution);
+	}
+
+	private async join(message: Message<unknown>, client: Client): Promise<void> {
+		const constitutionID = extractMessageData<ReqJoin>(message).id;
+		if (isNil(constitutionID) || !this.constitutions.has(constitutionID)) return;
+
+		firestore.collection(FS_CONSTITUTION_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {

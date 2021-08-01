@@ -26,6 +26,9 @@ interface SubscriptionData {
 	listeners: Set<Client>;
 }
 
+const DISPLAY_NAME_MAX_LENGTH = 25;
+const DESCRIPTION_MAX_LENGTH = 140;
+
 export const users: Map<string, SubscriptionData> = new Map();
 
 export class UserModule extends Module {
@@ -90,17 +93,6 @@ export class UserModule extends Module {
 		});
 	}
 
-	private limitData(user: User): void {
-		const DISPLAY_NAME_MAX_LENGTH = 25;
-		const DESCRIPTION_MAX_LENGTH = 140;
-
-		// Remove empty lines and limit username to 25 chars
-		user.displayName = cleanupString(user.displayName, DISPLAY_NAME_MAX_LENGTH);
-
-		// Remove empty lines and limit description to 140 chars
-		user.description = cleanupString(user.description, DESCRIPTION_MAX_LENGTH);
-	}
-
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
 		const requestData = extractMessageData<ReqEdit>(message).userData;
 		const localUser = users.get(requestData.uid);
@@ -108,17 +100,13 @@ export class UserModule extends Module {
 			return;
 		}
 
-		const user: User = {
-			uid: localUser.data.uid,
-			email: localUser.data.email,
-			displayName: requestData.displayName ?? localUser.data.displayName,
+		const updateData = {
+			displayName: cleanupString(requestData.displayName ?? localUser.data.displayName, DISPLAY_NAME_MAX_LENGTH),
 			photoURL: requestData.photoURL ?? localUser.data.photoURL,
-			roles: localUser.data.roles,
-			description: requestData.description ?? localUser.data.description,
+			description: cleanupString(requestData.description ?? localUser.data.description, DESCRIPTION_MAX_LENGTH),
 		};
-		this.limitData(user);
 
-		firestore.collection(FS_USERS_PATH).doc(user.uid).set(user, { merge: true });
+		firestore.collection(FS_USERS_PATH).doc(client.uid).update(updateData);
 	}
 
 	private async create(message: Message<unknown>, client: Client): Promise<void> {
@@ -135,14 +123,13 @@ export class UserModule extends Module {
 		const user: User = {
 			uid: createID(),
 			email: requestData.email,
-			displayName: requestData.displayName,
+			displayName: cleanupString(requestData.displayName, DISPLAY_NAME_MAX_LENGTH),
 			photoURL: requestData.photoURL,
 			roles: [Roles.MEMBER],
-			description: requestData.description,
+			description: cleanupString(requestData.description, DESCRIPTION_MAX_LENGTH),
 		};
-		this.limitData(user);
 
-		firestore.collection(FS_USERS_PATH).doc(requestData.uid).set(user, { merge: false });
+		firestore.collection(FS_USERS_PATH).doc(requestData.uid).create(user);
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
