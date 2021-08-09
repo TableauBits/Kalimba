@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>
+        Kalimba dashboard - <%= isAdmin ? "admin" : "public" %>
+    </title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <p>
+        Date et heure: <%= new Date().toString() %>
+    </p>
+    <p>
+        Niveau d'authentification du dashboard: <%= isAdmin ? "admin" : "public" %>
+    </p>
+</body>
