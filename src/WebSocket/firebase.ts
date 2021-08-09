@@ -1,7 +1,5 @@
-import * as dotenv from "dotenv";
 import * as admin from "firebase-admin";
 
-dotenv.config();
 const encryptedAdminSAK = process.env["MATBAY_SERVICE_ACCOUNT_KEY"];
 
 if (encryptedAdminSAK == undefined) {
