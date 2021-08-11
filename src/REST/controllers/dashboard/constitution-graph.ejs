@@ -1,0 +1,32 @@
+<canvas id="CstListeners"></canvas>
+<script>
+    const cstLabels = "<%= Array.from(cstMap.values()).map((value) => value.data.name) %>".split(",");
+    const cstDatas = "<%= Array.from(cstMap.values()).map((value) => value.listeners.size) %>".split(",");
+    const cstGraphData = {
+        labels: cstLabels,
+        datasets: [{
+            label: "listeners",
+            backgroundColor: 'rgb(99, 255, 132)',
+            borderColor: 'rgb(99, 255, 132)',
+            data: cstDatas,
+        }]
+    };
+    const cstGraphConfig = {
+        type: "bar",
+        data: cstGraphData,
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: "Nombre de \"listeners\" par constitution"
+                }
+            }
+        }
+    };
+    var cstGraph = new Chart(
+        document.getElementById("CstListeners"),
+        cstGraphConfig
+    );
+
+</script>
