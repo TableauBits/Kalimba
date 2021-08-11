@@ -29,11 +29,10 @@ interface SubscriptionData {
 const DISPLAY_NAME_MAX_LENGTH = 25;
 const DESCRIPTION_MAX_LENGTH = 140;
 
-export const users: Map<string, SubscriptionData> = new Map();
-
-export class UserModule extends Module {
+class UserModule extends Module {
 
 	public prefix = "USER";
+	public users: Map<string, SubscriptionData> = new Map();
 	private allUsersListener: Set<Client> = new Set();
 
 	constructor() {
@@ -50,7 +49,7 @@ export class UserModule extends Module {
 				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: newUserData });
 				switch (change.type) {
 					case "added":
-						users.set(newUserData.uid, { data: newUserData, listeners: new Set(this.allUsersListener) });
+						this.users.set(newUserData.uid, { data: newUserData, listeners: new Set(this.allUsersListener) });
 						this.allUsersListener.forEach((listener) => {
 							listener.socket.send(updateMessage);
 						});
@@ -58,11 +57,11 @@ export class UserModule extends Module {
 
 					case "removed":
 						// @TODO(Ithyx): Send deletion event (or something idk)
-						users.delete(newUserData.uid);
+						this.users.delete(newUserData.uid);
 						break;
 
 					case "modified": {
-						const user = users.get(newUserData.uid);
+						const user = this.users.get(newUserData.uid);
 						if (isNil(user)) return;
 						user.data = newUserData;
 						user.listeners.forEach((listener) => {
@@ -77,7 +76,7 @@ export class UserModule extends Module {
 	private async get(message: Message<unknown>, client: Client): Promise<void> {
 		const uids = extractMessageData<ReqGet>(message).uids;
 		for (const uid of uids) {
-			const user = users.get(uid);
+			const user = this.users.get(uid);
 			if (isNil(user)) continue;
 
 			user.listeners.add(client);
@@ -87,7 +86,7 @@ export class UserModule extends Module {
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		this.allUsersListener.add(client);
-		users.forEach((user) => {
+		this.users.forEach((user) => {
 			user.listeners.add(client);
 			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
 		});
@@ -95,7 +94,7 @@ export class UserModule extends Module {
 
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
 		const requestData = extractMessageData<ReqEdit>(message).userData;
-		const localUser = users.get(requestData.uid);
+		const localUser = this.users.get(requestData.uid);
 		if (client.uid !== requestData.uid || isNil(localUser)) {
 			return;
 		}
@@ -135,7 +134,7 @@ export class UserModule extends Module {
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
 		const uids = extractMessageData<ReqUnsubscribe>(message).uids;
 		for (const uid of uids) {
-			const user = users.get(uid);
+			const user = this.users.get(uid);
 			if (isNil(user)) continue;
 
 			user.listeners.delete(client);
@@ -153,9 +152,11 @@ export class UserModule extends Module {
 	}
 
 	public onClose(client: Client): void {
-		users.forEach((user: SubscriptionData) => {
+		this.users.forEach((user: SubscriptionData) => {
 			user.listeners.delete(client);
 		});
 		this.allUsersListener.delete(client);
 	}
 }
+
+export const userModule = new UserModule();

@@ -4,7 +4,7 @@ import { Constitution, ConstitutionType as ConstitutionTypes, EventTypes, Messag
 import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage, extractMessageData } from "../utility";
-import { users } from "./user";
+import { userModule } from "./user";
 
 const FS_CONSTITUTION_PATH = "matday/";
 
@@ -30,9 +30,9 @@ interface SubscriptionData {
 	listeners: Set<Client>;
 }
 
-export class ConstitutionModule extends Module {
+class ConstitutionModule extends Module {
 	public prefix = "CST";
-	private constitutions: Map<string, SubscriptionData> = new Map();
+	public constitutions: Map<string, SubscriptionData> = new Map();
 	private allConstitutionsListener: Set<Client> = new Set();
 	private pendingListens: Map<string, Client> = new Map();
 
@@ -109,7 +109,7 @@ export class ConstitutionModule extends Module {
 		const requestData = extractMessageData<ReqCreate>(message).cstData;
 
 		if (isNil(requestData)) return;
-		const user = users.get(client.uid);
+		const user = userModule.users.get(client.uid);
 		// A user can create a constitution if they are admin
 		if (isNil(user) || !user.data.roles.includes(Roles.ADMIN)) return;
 		if (requestData.type ?? ConstitutionTypes.LENGTH >= ConstitutionTypes.LENGTH) return;
@@ -171,3 +171,5 @@ export class ConstitutionModule extends Module {
 		this.allConstitutionsListener.delete(client);
 	}
 }
+
+export const constitutionModule = new ConstitutionModule();

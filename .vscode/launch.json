@@ -1,6 +1,7 @@
 {
     "configurations": [
         {
+            "request": "launch",
             "name": "launch",
             "type": "node-terminal",
             "command": "npm start"
