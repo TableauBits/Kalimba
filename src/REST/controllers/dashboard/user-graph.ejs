@@ -1,32 +1,39 @@
 <canvas id="UserListeners"></canvas>
 <script>
-    const usrLabels = "<%= Array.from(userMap.values()).map((value) => value.data.displayName) %>".split(",");
-    const usrDatas = "<%= Array.from(userMap.values()).map((value) => value.listeners.size) %>".split(",");
-    const usrGraphData = {
-        labels: usrLabels,
-        datasets: [{
-            label: "listeners",
-            backgroundColor: 'rgb(255, 99, 132)',
-            borderColor: 'rgb(255, 99, 132)',
-            data: usrDatas,
-        }]
-    };
-    const usrGraphConfig = {
-        type: "bar",
-        data: usrGraphData,
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: "Nombre de \"listeners\" par utilisateur"
+    {
+        const usrRawData = [
+            <%- Array.from(userMap.values()).filter((user) => user.listeners.size > 0)
+                .map((user) => { return JSON.stringify({ name: user.data.displayName, size: user.listeners.size }) }); %>
+        ];
+
+        const usrLabels = usrRawData.map((user) => user["name"]);
+        const usrDatas = usrRawData.map((user) => user["size"]);
+
+        const usrGraphData = {
+            labels: usrLabels,
+            datasets: [{
+                label: "listeners",
+                backgroundColor: 'rgb(255, 99, 132)',
+                borderColor: 'rgb(255, 99, 132)',
+                data: usrDatas,
+            }]
+        };
+        const usrGraphConfig = {
+            type: "bar",
+            data: usrGraphData,
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Nombre de \"listeners\" par utilisateur"
+                    }
                 }
             }
-        }
-    };
-    var usrGraph = new Chart(
-        document.getElementById("UserListeners"),
-        usrGraphConfig
-    );
-
+        };
+        var usrGraph = new Chart(
+            document.getElementById("UserListeners"),
+            usrGraphConfig
+        );
+    }
 </script>
