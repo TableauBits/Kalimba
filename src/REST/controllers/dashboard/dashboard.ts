@@ -3,6 +3,7 @@ import { isNil } from "lodash";
 import { renderFile } from "ejs";
 import { userModule } from "../../../WebSocket/modules/user";
 import { constitutionModule } from "../../../WebSocket/modules/constitution";
+import { clients } from "../../../WebSocket/event-handler";
 
 const password = process.env["DASHBOARD_PASSWORD"];
 if (isNil(password)) {
@@ -18,6 +19,7 @@ dashboardController.get("/", async (req, res) => {
 		isAdmin: passwordAttempt === password,
 		userMap: userModule.users,
 		cstMap: constitutionModule.constitutions,
+		clients: clients,
 	};
 	res.send(await renderFile(__dirname + "/template.ejs", data));
 });

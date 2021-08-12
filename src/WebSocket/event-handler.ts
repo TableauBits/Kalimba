@@ -113,3 +113,5 @@ function handleEvents(event: WebSocket.MessageEvent): void {
 
 	delegateToModules(message, client);
 }
+
+export { clients };
