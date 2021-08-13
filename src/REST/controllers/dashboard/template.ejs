@@ -35,5 +35,10 @@
         <div style="width: 50%; float: right;">
             <%- include("telemetry-data", {telemetry: telemetry, userMap: userMap}); %>
         </div>
-    <% } %>
+        <% } else { %>
+            Pour voir les informations administrateurs, entrez le mot de passe:
+            <input type="password" id="password" />
+            <button
+                onclick="window.location.href = window.location.pathname + '?pw=' + document.getElementById('password').value;">Valider</button>
+        <% } %>
 </body>
