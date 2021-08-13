@@ -29,8 +29,11 @@
     </div>
     <br style="clear: both;">
     <% if (isAdmin) { %>
-        <div style="width: 100%; float: left;">
+        <div style="width: 50%; float: left;">
             <%- include("online-users", {clients: clients, userMap: userMap}); %>
+        </div>
+        <div style="width: 50%; float: right;">
+            <%- include("telemetry-data", {telemetry: telemetry, userMap: userMap}); %>
         </div>
     <% } %>
 </body>

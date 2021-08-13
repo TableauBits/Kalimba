@@ -4,6 +4,7 @@ import { EventTypes, Message, Roles, User } from "../../Types/common";
 import { createID, firestore } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage, extractMessageData } from "../utility";
+import { telemetry } from "./telemetry";
 
 const FS_USERS_PATH = "users/";
 
@@ -52,7 +53,9 @@ class UserModule extends Module {
 						this.users.set(newUserData.uid, { data: newUserData, listeners: new Set(this.allUsersListener) });
 						this.allUsersListener.forEach((listener) => {
 							listener.socket.send(updateMessage);
+							telemetry.read();
 						});
+						telemetry.read(false);
 						break;
 
 					case "removed":
@@ -66,7 +69,9 @@ class UserModule extends Module {
 						user.data = newUserData;
 						user.listeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
+							telemetry.read();
 						});
+						telemetry.read(false);
 					} break;
 				}
 			}
@@ -81,6 +86,7 @@ class UserModule extends Module {
 
 			user.listeners.add(client);
 			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
+			telemetry.read();
 		}
 	}
 
@@ -89,6 +95,7 @@ class UserModule extends Module {
 		this.users.forEach((user) => {
 			user.listeners.add(client);
 			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
+			telemetry.read();
 		});
 	}
 
@@ -106,6 +113,7 @@ class UserModule extends Module {
 		};
 
 		firestore.collection(FS_USERS_PATH).doc(client.uid).update(updateData);
+		telemetry.write(false);
 	}
 
 	private async create(message: Message<unknown>, client: Client): Promise<void> {
@@ -129,6 +137,7 @@ class UserModule extends Module {
 		};
 
 		firestore.collection(FS_USERS_PATH).doc(requestData.uid).create(user);
+		telemetry.write(false);
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {

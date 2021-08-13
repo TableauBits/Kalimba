@@ -4,6 +4,7 @@ import { renderFile } from "ejs";
 import { userModule } from "../../../WebSocket/modules/user";
 import { constitutionModule } from "../../../WebSocket/modules/constitution";
 import { clients } from "../../../WebSocket/event-handler";
+import { telemetry } from "../../../WebSocket/modules/telemetry";
 
 const password = process.env["DASHBOARD_PASSWORD"];
 if (isNil(password)) {
@@ -20,6 +21,7 @@ dashboardController.get("/", async (req, res) => {
 		userMap: userModule.users,
 		cstMap: constitutionModule.constitutions,
 		clients: clients,
+		telemetry: telemetry,
 	};
 	res.send(await renderFile(__dirname + "/template.ejs", data));
 });

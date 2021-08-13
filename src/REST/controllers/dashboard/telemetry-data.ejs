@@ -1,0 +1,28 @@
+<p>
+	Lecture depuis le lancement du serveur: <%= telemetry.ioOperations.reads %> (<%=
+			telemetry.ioOperations.internalReads %> lectures évitées)
+</p>
+<p>
+	Écritures depuis le lancement du serveur: <%= telemetry.ioOperations.writes %>
+</p>
+
+<table>
+	<thead>
+		<tr>
+			<th>Type de l'èvènement reçu<br></th>
+			<th>Provenant de </th>
+		</tr>
+	</thead>
+	<tbody>
+		<% telemetry.requestDeque.slice().reverse().forEach(request=> { %>
+			<tr>
+				<td>
+					<%= request[0] %>
+				</td>
+				<td>
+					<%= userMap.get(request[1]).data.displayName %>
+				</td>
+			</tr>
+		<% }) %>
+	</tbody>
+</table>

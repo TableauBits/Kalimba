@@ -5,10 +5,12 @@ import { EventTypes, Message, ResponseStatus } from "../Types/common";
 import { auth } from "./firebase";
 import { Module } from "./module";
 import { constitutionModule } from "./modules/constitution";
+import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
 import { createMessage, extractMessageData } from "./utility";
 
-const modules: Module[] = [userModule, constitutionModule];
+// Telemetry HAS to be first!
+const modules: Module[] = [telemetry, userModule, constitutionModule];
 const clients: Client[] = [];
 
 interface ReqAuthenticate {
