@@ -1,8 +1,7 @@
+import { isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { Message } from "../../Types/common";
 import { Module } from "../module";
-
-const REQUESTS_MAX_MEMORY = 30;
 
 class TelemetryModule extends Module {
 	public prefix = "";
@@ -13,13 +12,12 @@ class TelemetryModule extends Module {
 		internalReads: 0,
 		internalWrites: 0, // Unused for now
 	}
-	public requestDeque: [string, string][] = []; // Event string to client uid
+	public eventHeatmap: Map<string, number> = new Map();
 
-	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
-		if (this.requestDeque.length >= REQUESTS_MAX_MEMORY) {
-			this.requestDeque.shift();
-		}
-		this.requestDeque.push([message.event, client.uid]);
+	public async handleEvent(message: Message<unknown>, _: Client): Promise<boolean> {
+		const count = this.eventHeatmap.get(message.event);
+		if (isNil(count)) this.eventHeatmap.set(message.event, 1);
+		else this.eventHeatmap.set(message.event, count + 1);
 
 		return false;
 	}
