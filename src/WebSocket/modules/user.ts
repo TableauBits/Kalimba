@@ -1,9 +1,9 @@
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { EventTypes, Message, User } from "../../Types/common";
-import { firestore } from "../firebase";
+import { EventTypes, Message, Roles, User } from "../../Types/common";
+import { createID, firestore } from "../firebase";
 import { Module } from "../module";
-import { createMessage, extractMessageData, removeFromArray } from "../utility";
+import { cleanupString, createMessage, extractMessageData } from "../utility";
 
 const FS_USERS_PATH = "users/";
 
@@ -22,48 +22,52 @@ interface ResUpdate {
 }
 
 interface SubscriptionData {
-	userData: User;
-	listeners: Client[];
+	data: User;
+	listeners: Set<Client>;
 }
+
+const DISPLAY_NAME_MAX_LENGTH = 25;
+const DESCRIPTION_MAX_LENGTH = 140;
+
+export const users: Map<string, SubscriptionData> = new Map();
 
 export class UserModule extends Module {
 
 	public prefix = "USER";
-	private subscriptions: Map<string, SubscriptionData> = new Map();
-	private allUsersListener: Client[] = [];
+	private allUsersListener: Set<Client> = new Set();
 
 	constructor() {
 		super();
 		this.moduleMap.set(EventTypes.USER_get, this.get);
 		this.moduleMap.set(EventTypes.USER_get_all, this.getAll);
 		this.moduleMap.set(EventTypes.USER_edit, this.edit);
-		this.moduleMap.set(EventTypes.USER_create, this.edit);
+		this.moduleMap.set(EventTypes.USER_create, this.create);
 		this.moduleMap.set(EventTypes.USER_unsubscribe, this.unsubscribe);
 
 		firestore.collection(FS_USERS_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
-				const userData = change.doc.data() as User;
-				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: userData });
+				const newUserData = change.doc.data() as User;
+				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: newUserData });
 				switch (change.type) {
 					case "added":
-						this.subscriptions.set(userData.uid, { userData: userData, listeners: [...this.allUsersListener] });
-						for (const listener of this.allUsersListener) {
+						users.set(newUserData.uid, { data: newUserData, listeners: new Set(this.allUsersListener) });
+						this.allUsersListener.forEach((listener) => {
 							listener.socket.send(updateMessage);
-						}
+						});
 						break;
 
 					case "removed":
 						// @TODO(Ithyx): Send deletion event (or something idk)
-						this.subscriptions.delete(userData.uid);
+						users.delete(newUserData.uid);
 						break;
 
 					case "modified": {
-						const localData = this.subscriptions.get(userData.uid);
-						if (isNil(localData)) return;
-						localData.userData = userData;
-						for (const listener of localData.listeners) {
+						const user = users.get(newUserData.uid);
+						if (isNil(user)) return;
+						user.data = newUserData;
+						user.listeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
-						}
+						});
 					} break;
 				}
 			}
@@ -73,52 +77,68 @@ export class UserModule extends Module {
 	private async get(message: Message<unknown>, client: Client): Promise<void> {
 		const uids = extractMessageData<ReqGet>(message).uids;
 		for (const uid of uids) {
-			const localData = this.subscriptions.get(uid);
-			if (isNil(localData)) continue;
+			const user = users.get(uid);
+			if (isNil(user)) continue;
 
-			localData.listeners.push(client);
-			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: localData.userData }));
+			user.listeners.add(client);
+			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
 		}
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
-		this.allUsersListener.push(client);
-		this.subscriptions.forEach((subscription) => {
-			subscription.listeners.push(client);
-		});
-
-		this.subscriptions.forEach((subscription) => {
-			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: subscription.userData }));
+		this.allUsersListener.add(client);
+		users.forEach((user) => {
+			user.listeners.add(client);
+			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
 		});
 	}
 
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
-		const user = extractMessageData<ReqEdit>(message).userData;
-		if (client.uid !== user.uid) {
+		const requestData = extractMessageData<ReqEdit>(message).userData;
+		const localUser = users.get(requestData.uid);
+		if (client.uid !== requestData.uid || isNil(localUser)) {
 			return;
 		}
 
-		const DISPLAY_NAME_MAX_LENGTH = 25;
-		const DESCRIPTION_MAX_LENGTH = 140;
+		const updateData = {
+			displayName: cleanupString(requestData.displayName ?? localUser.data.displayName, DISPLAY_NAME_MAX_LENGTH),
+			photoURL: requestData.photoURL ?? localUser.data.photoURL,
+			description: cleanupString(requestData.description ?? localUser.data.description, DESCRIPTION_MAX_LENGTH),
+		};
 
-		// Remove empty lines and limit username to 25 chars
-		user.displayName.replace(/^\s*\n/gm, "");
-		user.displayName = user.displayName.substring(0, Math.min(user.displayName.length, DISPLAY_NAME_MAX_LENGTH));
+		firestore.collection(FS_USERS_PATH).doc(client.uid).update(updateData);
+	}
 
-		// Remove empty lines and limit description to 140 chars
-		user.description.replace(/^\s*\n/gm, "");
-		user.description = user.description.substring(0, Math.min(user.description.length, DESCRIPTION_MAX_LENGTH));
+	private async create(message: Message<unknown>, client: Client): Promise<void> {
+		const requestData = extractMessageData<ReqEdit>(message).userData;
+		if (isNil(requestData)
+			|| client.uid !== requestData.uid
+			|| isNil(requestData.email)
+			|| isNil(requestData.displayName)
+			|| isNil(requestData.photoURL)
+			|| isNil(requestData.description)) {
+			return;
+		}
 
-		firestore.collection(FS_USERS_PATH).doc(user.uid).set(user, { merge: true });
+		const user: User = {
+			uid: createID(),
+			email: requestData.email,
+			displayName: cleanupString(requestData.displayName, DISPLAY_NAME_MAX_LENGTH),
+			photoURL: requestData.photoURL,
+			roles: [Roles.MEMBER],
+			description: cleanupString(requestData.description, DESCRIPTION_MAX_LENGTH),
+		};
+
+		firestore.collection(FS_USERS_PATH).doc(requestData.uid).create(user);
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
 		const uids = extractMessageData<ReqUnsubscribe>(message).uids;
 		for (const uid of uids) {
-			const localData = this.subscriptions.get(uid);
-			if (isNil(localData)) continue;
+			const user = users.get(uid);
+			if (isNil(user)) continue;
 
-			removeFromArray(client, localData.listeners);
+			user.listeners.delete(client);
 		}
 	}
 
@@ -133,9 +153,9 @@ export class UserModule extends Module {
 	}
 
 	public onClose(client: Client): void {
-		this.subscriptions.forEach((subData: SubscriptionData) => {
-			removeFromArray(client, subData.listeners);
+		users.forEach((user: SubscriptionData) => {
+			user.listeners.delete(client);
 		});
-		removeFromArray(client, this.allUsersListener);
+		this.allUsersListener.delete(client);
 	}
 }
