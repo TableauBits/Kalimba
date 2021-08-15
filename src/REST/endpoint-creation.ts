@@ -1,7 +1,7 @@
 import { Express } from "express";
 
-import { testController } from "./controllers/test-controller";
+import { dashboardController } from "./controllers/dashboard/dashboard";
 
 export function createEndpoints(app: Express): Express {
-	return app.use("/test", testController);
+	return app.use("/dashboard", dashboardController);
 }

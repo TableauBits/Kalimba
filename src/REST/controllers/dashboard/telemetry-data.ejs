@@ -1,0 +1,54 @@
+<p>
+	Lecture depuis le lancement du serveur: <%= telemetry.ioOperations.reads %> (<%=
+			telemetry.ioOperations.internalReads - telemetry.ioOperations.reads %> lectures évitées)
+</p>
+<p>
+	Écritures depuis le lancement du serveur: <%= telemetry.ioOperations.writes %>
+</p>
+
+<canvas id="telemetryEventPie"></canvas>
+<script>
+	{
+		const newColor = function () {
+			const r = Math.floor(Math.random() * 255);
+			const g = Math.floor(Math.random() * 255);
+			const b = Math.floor(Math.random() * 255);
+			return "rgb(" + r + "," + g + "," + b + ")";
+		}
+
+		const tlmRawDatas = [
+			<%- Array.from(telemetry.eventHeatmap.entries()).sort((event1, event2) => event1[1] - event2[1]).map((entry) => JSON.stringify(entry)) %>
+		]
+
+		const tlmLabels = tlmRawDatas.map((entry) => entry[0]);
+		const tlmDatas = tlmRawDatas.map((entry) => entry[1]);
+		const tlmColors = [];
+		tlmDatas.forEach(() => tlmColors.push(newColor()));
+
+		const tlmData = {
+			labels: tlmLabels,
+			datasets: [{
+				label: "Events",
+				data: tlmDatas,
+				backgroundColor: tlmColors,
+			}]
+		};
+		const tlmPieConfig = {
+			type: "pie",
+			data: tlmData,
+			options: {
+				responsive: true,
+				plugins: {
+					title: {
+						display: true,
+						text: "Répartition des évènements enregistrés"
+					}
+				}
+			}
+		};
+		var tlmEventPie = new Chart(
+			document.getElementById("telemetryEventPie"),
+			tlmPieConfig
+		);
+	}
+</script>

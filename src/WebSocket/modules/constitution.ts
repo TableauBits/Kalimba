@@ -4,7 +4,8 @@ import { Constitution, ConstitutionType as ConstitutionTypes, EventTypes, Messag
 import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage, extractMessageData } from "../utility";
-import { users } from "./user";
+import { telemetry } from "./telemetry";
+import { userModule } from "./user";
 
 const FS_CONSTITUTION_PATH = "matday/";
 
@@ -30,9 +31,9 @@ interface SubscriptionData {
 	listeners: Set<Client>;
 }
 
-export class ConstitutionModule extends Module {
+class ConstitutionModule extends Module {
 	public prefix = "CST";
-	private constitutions: Map<string, SubscriptionData> = new Map();
+	public constitutions: Map<string, SubscriptionData> = new Map();
 	private allConstitutionsListener: Set<Client> = new Set();
 	private pendingListens: Map<string, Client> = new Map();
 
@@ -59,7 +60,9 @@ export class ConstitutionModule extends Module {
 						this.constitutions.set(newConstitutionData.id, { data: newConstitutionData, listeners: newListeners });
 						newListeners.forEach((listener) => {
 							listener.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: newConstitutionData }));
+							telemetry.read();
 						});
+						telemetry.read(false);
 					} break;
 
 					case "removed":
@@ -73,7 +76,9 @@ export class ConstitutionModule extends Module {
 						constitution.data = newConstitutionData;
 						constitution.listeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
+							telemetry.read();
 						});
+						telemetry.read(false);
 					} break;
 				}
 			}
@@ -88,6 +93,7 @@ export class ConstitutionModule extends Module {
 
 			constitution.listeners.add(client);
 			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { cstInfo: constitution.data }));
+			telemetry.read();
 		}
 	}
 
@@ -101,6 +107,7 @@ export class ConstitutionModule extends Module {
 			if (isPublic || users.includes(client.uid)) {
 				constitution.listeners.add(client);
 				client.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: constitution.data }));
+				telemetry.read();
 			}
 		});
 	}
@@ -109,7 +116,7 @@ export class ConstitutionModule extends Module {
 		const requestData = extractMessageData<ReqCreate>(message).cstData;
 
 		if (isNil(requestData)) return;
-		const user = users.get(client.uid);
+		const user = userModule.users.get(client.uid);
 		// A user can create a constitution if they are admin
 		if (isNil(user) || !user.data.roles.includes(Roles.ADMIN)) return;
 		if (requestData.type ?? ConstitutionTypes.LENGTH >= ConstitutionTypes.LENGTH) return;
@@ -135,6 +142,7 @@ export class ConstitutionModule extends Module {
 		this.pendingListens.set(constitution.id, client);
 
 		firestore.collection(FS_CONSTITUTION_PATH).doc(constitution.id).create(constitution);
+		telemetry.write(false);
 	}
 
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
@@ -142,6 +150,7 @@ export class ConstitutionModule extends Module {
 		if (isNil(constitutionID) || !this.constitutions.has(constitutionID)) return;
 
 		firestore.collection(FS_CONSTITUTION_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
+		telemetry.write(false);
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
@@ -171,3 +180,5 @@ export class ConstitutionModule extends Module {
 		this.allConstitutionsListener.delete(client);
 	}
 }
+
+export const constitutionModule = new ConstitutionModule();

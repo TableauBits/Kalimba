@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>
+        Kalimba dashboard - <%= isAdmin ? "admin" : "public" %>
+    </title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- materializecss css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- materializecss js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</head>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<body>
+    <p>
+        Date et heure: <%= new Date().toString() %>
+    </p>
+    <p>
+        Niveau d'authentification du dashboard: <%= isAdmin ? "admin" : "public" %>
+    </p>
+    <div style="width: 50%; float: left;">
+        <%- include("user-graph", {userMap: userMap}); %>
+    </div>
+    <div style="width: 50%; float: right;">
+        <%- include("constitution-graph", {cstMap: cstMap}); %>
+    </div>
+    <br style="clear: both;">
+    <% if (isAdmin) { %>
+        <div style="width: 50%; float: left;">
+            <%- include("online-users", {clients: clients, userMap: userMap}); %>
+        </div>
+        <div style="width: 50%; float: right;">
+            <%- include("telemetry-data", {telemetry: telemetry, userMap: userMap}); %>
+        </div>
+        <% } else { %>
+            Pour voir les informations administrateurs, entrez le mot de passe:
+            <input type="password" id="password" />
+            <button
+                onclick="window.location.href = window.location.pathname + '?pw=' + document.getElementById('password').value;">Valider</button>
+        <% } %>
+</body>

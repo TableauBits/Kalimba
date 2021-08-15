@@ -1,0 +1,11 @@
+<p>Connexions actives:</p>
+<ul class="collection">
+    <% clients.forEach(client=> { %>
+        <li class="collection-item avatar">
+            <img src="<%= userMap.get(client.uid).data.photoURL %>" alt="" class="circle">
+            <span class="title">
+                <%= userMap.get(client.uid).data.displayName %>
+            </span>
+        </li>
+    <% }) %>
+</ul>
