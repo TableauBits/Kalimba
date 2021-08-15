@@ -1,4 +1,4 @@
-import { CLTReqAuthenticate, EventType, Message, ResponseStatus } from "@tableaubits/hang";
+import { CltReqAuthenticate, EventType, Message, ResponseStatus } from "@tableaubits/hang";
 import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
@@ -30,7 +30,7 @@ export function setupWS(ws: WebSocket): void {
 			console.warn("WS event receieved before authentication! Event", event.data.toString(), "ignored...");
 			return;
 		}
-		const token = extractMessageData<CLTReqAuthenticate>(message).idToken;
+		const token = extractMessageData<CltReqAuthenticate>(message).idToken;
 		auth
 			.verifyIdToken(token)
 			.then((idToken) => {
