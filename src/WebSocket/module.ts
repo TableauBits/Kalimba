@@ -1,5 +1,5 @@
+import { Message } from "@tableaubits/hang";
 import { Client } from "../Types/client";
-import { Message } from "../Types/common";
 
 export type moduleFunction = {
 	(message: Message<unknown>, client: Client): Promise<void>

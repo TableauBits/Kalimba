@@ -1,7 +1,7 @@
+import { CLTReqAuthenticate, EventType, Message, ResponseStatus } from "@tableaubits/hang";
 import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
-import { EventTypes, Message, ResponseStatus } from "../Types/common";
 import { auth } from "./firebase";
 import { Module } from "./module";
 import { constitutionModule } from "./modules/constitution";
@@ -12,10 +12,6 @@ import { createMessage, extractMessageData } from "./utility";
 // Telemetry HAS to be first!
 const modules: Module[] = [telemetry, userModule, constitutionModule];
 const clients: Client[] = [];
-
-interface ReqAuthenticate {
-	idToken: string;
-}
 
 function decodeMessage<T>(eventData: string): Message<T> | undefined {
 	try {
@@ -30,11 +26,11 @@ export function setupWS(ws: WebSocket): void {
 	ws.onmessage = async (event) => {
 		const message = decodeMessage<string>(event.data.toString());
 		if (isNil(message)) return;
-		if (message.event !== EventTypes.CLIENT_authenticate) {
+		if (message.event !== EventType.CLIENT_authenticate) {
 			console.warn("WS event receieved before authentication! Event", event.data.toString(), "ignored...");
 			return;
 		}
-		const token = extractMessageData<ReqAuthenticate>(message).idToken;
+		const token = extractMessageData<CLTReqAuthenticate>(message).idToken;
 		auth
 			.verifyIdToken(token)
 			.then((idToken) => {
@@ -51,7 +47,7 @@ export function setupWS(ws: WebSocket): void {
 					success: true,
 					status: idToken.uid
 				};
-				ws.send(createMessage(EventTypes.CLIENT_authenticate, response));
+				ws.send(createMessage(EventType.CLIENT_authenticate, response));
 			})
 			.catch((reason) => {
 				const response: ResponseStatus = {
@@ -59,7 +55,7 @@ export function setupWS(ws: WebSocket): void {
 					status: reason,
 				};
 				console.error("Client failed to authenticate:", response);
-				ws.send(createMessage(EventTypes.CLIENT_authenticate, response));
+				ws.send(createMessage(EventType.CLIENT_authenticate, response));
 				ws.close();
 			});
 	};
