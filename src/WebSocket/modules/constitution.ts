@@ -1,6 +1,6 @@
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, Message, Role } from "@tableaubits/hang";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { Constitution, ConstitutionType as ConstitutionTypes, EventTypes, Message, Roles } from "../../Types/common";
 import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage, extractMessageData } from "../utility";
@@ -9,22 +9,6 @@ import { userModule } from "./user";
 
 const FS_CONSTITUTION_PATH = "matday/";
 
-interface ReqGet {
-	ids: string[];
-}
-interface ReqCreate {
-	cstData: Constitution;
-}
-interface ReqJoin {
-	id: string;
-}
-interface ReqUnsubscribe {
-	ids: string[];
-}
-
-interface ResUpdate {
-	cstInfo: Constitution;
-}
 
 interface SubscriptionData {
 	data: Constitution;
@@ -39,16 +23,16 @@ class ConstitutionModule extends Module {
 
 	constructor() {
 		super();
-		this.moduleMap.set(EventTypes.CST_get, this.get);
-		this.moduleMap.set(EventTypes.CST_get_from_user, this.getFromUser);
-		this.moduleMap.set(EventTypes.CST_create, this.create);
-		this.moduleMap.set(EventTypes.CST_join, this.join);
-		this.moduleMap.set(EventTypes.CST_unsubscribe, this.unsubscribe);
+		this.moduleMap.set(EventType.CST_get, this.get);
+		this.moduleMap.set(EventType.CST_get_from_user, this.getFromUser);
+		this.moduleMap.set(EventType.CST_create, this.create);
+		this.moduleMap.set(EventType.CST_join, this.join);
+		this.moduleMap.set(EventType.CST_unsubscribe, this.unsubscribe);
 
 		firestore.collection(FS_CONSTITUTION_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newConstitutionData = change.doc.data() as Constitution;
-				const updateMessage = createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: newConstitutionData });
+				const updateMessage = createMessage<CstResUpdate>(EventType.CST_update, { cstInfo: newConstitutionData });
 				switch (change.type) {
 					case "added": {
 						const newListeners: Set<Client> = new Set(this.allConstitutionsListener);
@@ -59,7 +43,7 @@ class ConstitutionModule extends Module {
 						}
 						this.constitutions.set(newConstitutionData.id, { data: newConstitutionData, listeners: newListeners });
 						newListeners.forEach((listener) => {
-							listener.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: newConstitutionData }));
+							listener.socket.send(createMessage<CstResUpdate>(EventType.CST_update, { cstInfo: newConstitutionData }));
 							telemetry.read();
 						});
 						telemetry.read(false);
@@ -86,13 +70,13 @@ class ConstitutionModule extends Module {
 	}
 
 	private async get(message: Message<unknown>, client: Client): Promise<void> {
-		const uids = extractMessageData<ReqGet>(message).ids;
+		const uids = extractMessageData<CstReqGet>(message).ids;
 		for (const uid of uids) {
 			const constitution = this.constitutions.get(uid);
 			if (isNil(constitution)) continue;
 
 			constitution.listeners.add(client);
-			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { cstInfo: constitution.data }));
+			client.socket.send(createMessage<CstResUpdate>(EventType.USER_update, { cstInfo: constitution.data }));
 			telemetry.read();
 		}
 	}
@@ -106,20 +90,20 @@ class ConstitutionModule extends Module {
 			const { isPublic, users } = constitution.data;
 			if (isPublic || users.includes(client.uid)) {
 				constitution.listeners.add(client);
-				client.socket.send(createMessage<ResUpdate>(EventTypes.CST_update, { cstInfo: constitution.data }));
+				client.socket.send(createMessage<CstResUpdate>(EventType.CST_update, { cstInfo: constitution.data }));
 				telemetry.read();
 			}
 		});
 	}
 
 	private async create(message: Message<unknown>, client: Client): Promise<void> {
-		const requestData = extractMessageData<ReqCreate>(message).cstData;
+		const requestData = extractMessageData<CstReqCreate>(message).cstData;
 
 		if (isNil(requestData)) return;
 		const user = userModule.users.get(client.uid);
 		// A user can create a constitution if they are admin
-		if (isNil(user) || !user.data.roles.includes(Roles.ADMIN)) return;
-		if (requestData.type ?? ConstitutionTypes.LENGTH >= ConstitutionTypes.LENGTH) return;
+		if (isNil(user) || !user.data.roles.includes(Role.ADMIN)) return;
+		if (requestData.type ?? ConstitutionType.LENGTH >= ConstitutionType.LENGTH) return;
 		if (isNil(requestData.playlistLink)) return;
 
 		const NAME_MAX_LENGTH = 30;
@@ -131,7 +115,7 @@ class ConstitutionModule extends Module {
 			name: cleanupString(requestData.name ?? "", NAME_MAX_LENGTH),
 			isPublic: requestData.isPublic ?? false,
 			anonymousLevel: requestData.anonymousLevel ?? 0,
-			type: requestData.type ?? ConstitutionTypes.GRADE,
+			type: requestData.type ?? ConstitutionType.GRADE,
 			state: 0,
 			playlistLink: requestData.playlistLink,
 			users: [client.uid],
@@ -146,7 +130,7 @@ class ConstitutionModule extends Module {
 	}
 
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
-		const constitutionID = extractMessageData<ReqJoin>(message).id;
+		const constitutionID = extractMessageData<CstReqJoin>(message).id;
 		if (isNil(constitutionID) || !this.constitutions.has(constitutionID)) return;
 
 		firestore.collection(FS_CONSTITUTION_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
@@ -154,7 +138,7 @@ class ConstitutionModule extends Module {
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
-		const uids = extractMessageData<ReqUnsubscribe>(message).ids;
+		const uids = extractMessageData<CstReqUnsubscribe>(message).ids;
 		for (const uid of uids) {
 			const constitution = this.constitutions.get(uid);
 			if (isNil(constitution)) continue;

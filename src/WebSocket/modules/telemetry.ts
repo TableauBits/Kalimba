@@ -1,6 +1,6 @@
+import { Message } from "@tableaubits/hang";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { Message } from "../../Types/common";
 import { Module } from "../module";
 
 class TelemetryModule extends Module {

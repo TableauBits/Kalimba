@@ -1,26 +1,12 @@
+import { EventType, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "@tableaubits/hang";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { EventTypes, Message, Roles, User } from "../../Types/common";
 import { createID, firestore } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage, extractMessageData } from "../utility";
 import { telemetry } from "./telemetry";
 
 const FS_USERS_PATH = "users/";
-
-interface ReqGet {
-	uids: string[];
-}
-interface ReqEdit {
-	userData: User;
-}
-interface ReqUnsubscribe {
-	uids: string[];
-}
-
-interface ResUpdate {
-	userInfo: User;
-}
 
 interface SubscriptionData {
 	data: User;
@@ -38,16 +24,16 @@ class UserModule extends Module {
 
 	constructor() {
 		super();
-		this.moduleMap.set(EventTypes.USER_get, this.get);
-		this.moduleMap.set(EventTypes.USER_get_all, this.getAll);
-		this.moduleMap.set(EventTypes.USER_edit, this.edit);
-		this.moduleMap.set(EventTypes.USER_create, this.create);
-		this.moduleMap.set(EventTypes.USER_unsubscribe, this.unsubscribe);
+		this.moduleMap.set(EventType.USER_get, this.get);
+		this.moduleMap.set(EventType.USER_get_all, this.getAll);
+		this.moduleMap.set(EventType.USER_edit, this.edit);
+		this.moduleMap.set(EventType.USER_create, this.create);
+		this.moduleMap.set(EventType.USER_unsubscribe, this.unsubscribe);
 
 		firestore.collection(FS_USERS_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newUserData = change.doc.data() as User;
-				const updateMessage = createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: newUserData });
+				const updateMessage = createMessage<UsrResUpdate>(EventType.USER_update, { userInfo: newUserData });
 				switch (change.type) {
 					case "added":
 						this.users.set(newUserData.uid, { data: newUserData, listeners: new Set(this.allUsersListener) });
@@ -79,13 +65,13 @@ class UserModule extends Module {
 	}
 
 	private async get(message: Message<unknown>, client: Client): Promise<void> {
-		const uids = extractMessageData<ReqGet>(message).uids;
+		const uids = extractMessageData<UsrReqGet>(message).uids;
 		for (const uid of uids) {
 			const user = this.users.get(uid);
 			if (isNil(user)) continue;
 
 			user.listeners.add(client);
-			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
+			client.socket.send(createMessage<UsrResUpdate>(EventType.USER_update, { userInfo: user.data }));
 			telemetry.read();
 		}
 	}
@@ -94,13 +80,13 @@ class UserModule extends Module {
 		this.allUsersListener.add(client);
 		this.users.forEach((user) => {
 			user.listeners.add(client);
-			client.socket.send(createMessage<ResUpdate>(EventTypes.USER_update, { userInfo: user.data }));
+			client.socket.send(createMessage<UsrResUpdate>(EventType.USER_update, { userInfo: user.data }));
 			telemetry.read();
 		});
 	}
 
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
-		const requestData = extractMessageData<ReqEdit>(message).userData;
+		const requestData = extractMessageData<UsrReqEdit>(message).userData;
 		const localUser = this.users.get(requestData.uid);
 		if (client.uid !== requestData.uid || isNil(localUser)) {
 			return;
@@ -117,7 +103,7 @@ class UserModule extends Module {
 	}
 
 	private async create(message: Message<unknown>, client: Client): Promise<void> {
-		const requestData = extractMessageData<ReqEdit>(message).userData;
+		const requestData = extractMessageData<UsrReqEdit>(message).userData;
 		if (isNil(requestData)
 			|| client.uid !== requestData.uid
 			|| isNil(requestData.email)
@@ -132,7 +118,7 @@ class UserModule extends Module {
 			email: requestData.email,
 			displayName: cleanupString(requestData.displayName, DISPLAY_NAME_MAX_LENGTH),
 			photoURL: requestData.photoURL,
-			roles: [Roles.MEMBER],
+			roles: [Role.MEMBER],
 			description: cleanupString(requestData.description, DESCRIPTION_MAX_LENGTH),
 		};
 
@@ -141,7 +127,7 @@ class UserModule extends Module {
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
-		const uids = extractMessageData<ReqUnsubscribe>(message).uids;
+		const uids = extractMessageData<UsrReqUnsubscribe>(message).uids;
 		for (const uid of uids) {
 			const user = this.users.get(uid);
 			if (isNil(user)) continue;
