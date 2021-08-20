@@ -1,16 +1,16 @@
-import { CltReqAuthenticate, EventType, Message, ResponseStatus } from "@tableaubits/hang";
+import { CltReqAuthenticate, EventType, Message, ResponseStatus, createMessage, extractMessageData } from "@tableaubits/hang";
 import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
 import { auth } from "./firebase";
 import { Module } from "./module";
 import { constitutionModule } from "./modules/constitution";
+import { moderationModule } from "./modules/moderation";
 import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
-import { createMessage, extractMessageData } from "./utility";
 
 // Telemetry HAS to be first!
-const modules: Module[] = [telemetry, userModule, constitutionModule];
+const modules: Module[] = [telemetry, userModule, constitutionModule, moderationModule];
 const clients: Client[] = [];
 
 function decodeMessage<T>(eventData: string): Message<T> | undefined {

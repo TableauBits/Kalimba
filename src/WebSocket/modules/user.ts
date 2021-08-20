@@ -1,9 +1,9 @@
-import { EventType, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "@tableaubits/hang";
+import { EventType, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate, createMessage, extractMessageData } from "@tableaubits/hang";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore } from "../firebase";
 import { Module } from "../module";
-import { cleanupString, createMessage, extractMessageData } from "../utility";
+import { cleanupString } from "../utility";
 import { telemetry } from "./telemetry";
 
 const FS_USERS_PATH = "users/";

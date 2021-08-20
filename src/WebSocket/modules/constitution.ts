@@ -1,9 +1,9 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, Message, Role } from "@tableaubits/hang";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, Message, Role, createMessage, extractMessageData } from "@tableaubits/hang";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
-import { cleanupString, createMessage, extractMessageData } from "../utility";
+import { cleanupString } from "../utility";
 import { telemetry } from "./telemetry";
 import { userModule } from "./user";
 
