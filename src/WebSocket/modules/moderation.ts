@@ -3,9 +3,13 @@ import { createMessage, extractMessageData, Message, ResponseStatus, Role } from
 import { Client } from "../../Types/client";
 import { userModule } from "./user";
 import { isNil } from "lodash";
-import { firestore, firestoreTypes } from "../firebase";
+import { createID, firestore, firestoreTypes } from "../firebase";
 
 interface ReqKick {
+	uid: string;
+	cstId: string;
+}
+interface ReqNeutralize {
 	uid: string;
 	cstId: string;
 }
@@ -19,12 +23,20 @@ interface OldConstitution {
 	owner: string;
 }
 
+interface Vote {
+	grade: number;
+	id: string;
+	songID: number;
+	userID: string
+}
+
 class ModerationModule extends Module {
 	public prefix = "MOD";
 
 	constructor() {
 		super();
 		this.moduleMap.set("MOD-kick", this.kick);
+		this.moduleMap.set("MOD-neutralize", this.neutralize);
 	}
 
 	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
@@ -78,6 +90,45 @@ class ModerationModule extends Module {
 		firestore.collection("constitutions").doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayRemove(kickedUID) });
 
 		client.socket.send(createMessage<ResponseStatus>(message.event, { success: true, status: `${kickedUID} was kicked successfully.` }));
+	}
+
+	private async neutralize(message: Message<unknown>, client: Client): Promise<void> {
+		const requester = userModule.users.get(client.uid);
+		if (isNil(requester) || !requester.data.roles.includes(Role.ADMIN)) {
+			client.socket.send(createMessage<ResponseStatus>(message.event, { success: false, status: "You do not have the permissions to do that!" }));
+			return;
+		}
+
+		const requestData = extractMessageData<ReqNeutralize>(message);
+		const neutralizedID = requestData.uid;
+		const constitutionID = requestData.cstId;
+
+		// Build the set of songs where a user should have voted for
+		const songMap: Set<number> = new Set();
+		const totalSongRefs = await firestore.collection(`constitutions/${constitutionID}/songs`).where("patron", "!=", neutralizedID).get();
+		totalSongRefs.forEach((song) => {
+			songMap.add((song.data() as Song).id);
+		});
+
+		// Find user's votes, and update their values
+		const votesFromRefs = await firestore.collection(`constitutions/${constitutionID}/votes`).where("userID", "==", neutralizedID).get();
+		votesFromRefs.forEach((vote) => {
+			vote.ref.update({ grade: 5 });
+			songMap.delete((vote.data() as Vote).songID);
+		});
+
+		// For every vote still in the set, we need to create these votes correctly
+		songMap.forEach((songID) => {
+			const newVote: Vote = {
+				grade: 5,
+				id: createID(),
+				songID: songID,
+				userID: neutralizedID,
+			};
+			firestore.collection(`constitutions/${constitutionID}/votes`).doc(newVote.id).create(newVote);
+		});
+
+		client.socket.send(createMessage<ResponseStatus>(message.event, { success: true, status: `${neutralizedID} was successfully neutralized.` }));
 	}
 
 }
