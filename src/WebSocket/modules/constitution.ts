@@ -101,6 +101,7 @@ class ConstitutionModule extends Module {
 
 		if (isNil(requestData)) return;
 		const user = userModule.users.get(client.uid);
+		telemetry.read();
 		// A user can create a constitution if they are admin
 		if (isNil(user) || !user.data.roles.includes(Role.ADMIN)) return;
 		if (requestData.type ?? ConstitutionType.LENGTH >= ConstitutionType.LENGTH) return;

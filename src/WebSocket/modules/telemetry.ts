@@ -29,6 +29,13 @@ class TelemetryModule extends Module {
 		else ++this.ioOperations.reads;
 	}
 
+	public reads(count: number, internal = true): void {
+		count = Math.max(count, 0);
+
+		if (internal) this.ioOperations.internalReads += count;
+		else this.ioOperations.reads += count;
+	}
+
 	public write(internal = true): void {
 		if (internal) ++this.ioOperations.internalWrites;
 		else ++this.ioOperations.writes;
