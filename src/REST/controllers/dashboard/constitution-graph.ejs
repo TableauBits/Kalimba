@@ -3,7 +3,7 @@
     {
         const cstRawData = [
             <%- Array.from(cstMap.values()).filter((constitution) => constitution.listeners.size > 0)
-                .map((constitution) => { return JSON.stringify({ name: constitution.data.name, size: constitution.listeners.size }) }); %>
+                .map((constitution) => { return JSON.stringify({ name: constitution.module.data.name, size: constitution.listeners.size }) }); %>
         ];
 
         const cstLabels = cstRawData.map((constitution) => constitution["name"]);
