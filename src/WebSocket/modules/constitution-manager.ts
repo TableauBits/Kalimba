@@ -61,7 +61,7 @@ class ConstitutionManagerModule extends Module {
 					case "modified": {
 						const constitution = this.constitutions.get(newConstitutionData.id);
 						if (isNil(constitution)) return;
-						constitution.module.data = newConstitutionData;
+						constitution.module.updateData(newConstitutionData);
 						constitution.listeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
 							telemetry.read();

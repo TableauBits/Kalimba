@@ -44,11 +44,6 @@ class UserModule extends Module {
 						telemetry.read(false);
 						break;
 
-					case "removed":
-						// @TODO(Ithyx): Send deletion event (or something idk)
-						this.users.delete(newUserData.uid);
-						break;
-
 					case "modified": {
 						const user = this.users.get(newUserData.uid);
 						if (isNil(user)) return;
@@ -59,6 +54,11 @@ class UserModule extends Module {
 						});
 						telemetry.read(false);
 					} break;
+
+					case "removed":
+						// @TODO(Ithyx): Send deletion event (or something idk)
+						this.users.delete(newUserData.uid);
+						break;
 				}
 			}
 		});
