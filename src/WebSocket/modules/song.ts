@@ -116,7 +116,7 @@ export class SongModule extends SubModule<Constitution> {
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		this.listeners.add(client);
 		this.songs.forEach((song) => {
-			client.socket.send(createMessage<CstSongResUpdate>(EventType.CST_SONG_get_all, {status: "added", songInfo: song}));
+			client.socket.send(createMessage<CstSongResUpdate>(EventType.CST_SONG_update, {status: "added", songInfo: song}));
 			telemetry.read();
 		});
 	}
