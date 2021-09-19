@@ -11,3 +11,7 @@ export abstract class Module {
 	public abstract prefix: string;
 	protected moduleMap: Map<string, moduleFunction> = new Map();
 }
+
+export abstract class SubModule<T> extends Module {
+	public abstract updateData(data: T): void;
+}
