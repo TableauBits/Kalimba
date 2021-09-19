@@ -5,7 +5,6 @@ import { SongModule } from "./song";
 
 export class ConstitutionModule {
 	private submodules: SubModule<Constitution>[] = [];
-
 	constructor(public data: Constitution) {
 		this.submodules.push(new SongModule(data));
 	}
