@@ -4,7 +4,7 @@ import WebSocket from "ws";
 import { Client } from "../Types/client";
 import { auth } from "./firebase";
 import { Module } from "./module";
-import { constitutionModule } from "./modules/constitution";
+import { constitutionModule } from "./modules/constitution-manager";
 import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
 import { createMessage, extractMessageData } from "./utility";

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { isNil } from "lodash";
 import { renderFile } from "ejs";
 import { userModule } from "../../../WebSocket/modules/user";
-import { constitutionModule } from "../../../WebSocket/modules/constitution";
+import { constitutionModule } from "../../../WebSocket/modules/constitution-manager";
 import { clients } from "../../../WebSocket/event-handler";
 import { telemetry } from "../../../WebSocket/modules/telemetry";
 
