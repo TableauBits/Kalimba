@@ -1,11 +1,10 @@
-import { Constitution, Message } from "@tableaubits/hang";
+import { Constitution, Message } from "chelys";
 import { SubModule } from "../module";
 import { Client } from "../../Types/client";
 import { SongModule } from "./song";
 
 export class ConstitutionModule {
 	private submodules: SubModule<Constitution>[] = [];
-	
 	constructor(public data: Constitution) {
 		this.submodules.push(new SongModule(data));
 	}

@@ -1,4 +1,4 @@
-import { EventType, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "@tableaubits/hang";
+import { EventType, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore } from "../firebase";
