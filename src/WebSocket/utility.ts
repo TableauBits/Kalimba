@@ -1,4 +1,4 @@
-import { Message } from "@tableaubits/hang";
+import { Message } from "chelys";
 
 export function createMessage<T>(event: string, data: T): string {
 	return JSON.stringify({ event: event, data: data });

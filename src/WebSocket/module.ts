@@ -1,4 +1,4 @@
-import { Message } from "@tableaubits/hang";
+import { Message } from "chelys";
 import { Client } from "../Types/client";
 
 export type moduleFunction = {
