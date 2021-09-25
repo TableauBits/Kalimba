@@ -1,4 +1,4 @@
-import { canModifySongs, Constitution, createMessage, CstSongReqAdd, CstSongReqRemove, CstSongResUpdate, CstSongReqUnsubscribe, EventType, extractMessageData, Message, Song, SongPlatform} from "@tableaubits/hang";
+import { canModifySongs, Constitution, createMessage, CstSongReqAdd, CstSongReqRemove, CstSongResUpdate, CstSongReqUnsubscribe, EventType, extractMessageData, Message, Song, SongPlatform} from "chelys";
 import { firestore } from "../firebase";
 import { isNil, max } from "lodash";
 import { Client } from "../../Types/client";
