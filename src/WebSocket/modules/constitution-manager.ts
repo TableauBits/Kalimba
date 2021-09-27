@@ -3,12 +3,10 @@ import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
-import { cleanupString, createMessage, extractMessageData } from "../utility";
+import { cleanupString, createMessage, extractMessageData, FS_CONSTITUTIONS_PATH } from "../utility";
 import { telemetry } from "./telemetry";
 import { userModule } from "./user";
 import { ConstitutionModule } from "./constitution";
-
-const FS_CONSTITUTION_PATH = "matday/";
 
 interface SubscriptionData {
 	module: ConstitutionModule;
@@ -33,7 +31,7 @@ class ConstitutionManagerModule extends Module {
 		this.moduleMap.set(EventType.CST_join, this.join);
 		this.moduleMap.set(EventType.CST_unsubscribe, this.unsubscribe);
 
-		firestore.collection(FS_CONSTITUTION_PATH).onSnapshot((collection) => {
+		firestore.collection(FS_CONSTITUTIONS_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newConstitutionData = change.doc.data() as Constitution;
 				const updateMessage = createMessage<CstResUpdate>(EventType.CST_update, { cstInfo: newConstitutionData });
@@ -129,7 +127,7 @@ class ConstitutionManagerModule extends Module {
 
 		this.pendingListens.set(constitution.id, client);
 
-		firestore.collection(FS_CONSTITUTION_PATH).doc(constitution.id).create(constitution);
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitution.id).create(constitution);
 		telemetry.write(false);
 	}
 
@@ -137,7 +135,7 @@ class ConstitutionManagerModule extends Module {
 		const constitutionID = extractMessageData<CstReqJoin>(message).id;
 		if (isNil(constitutionID) || !this.constitutions.has(constitutionID)) return;
 
-		firestore.collection(FS_CONSTITUTION_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
 		telemetry.write(false);
 	}
 

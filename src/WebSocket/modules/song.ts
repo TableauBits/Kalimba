@@ -1,9 +1,10 @@
-import { canModifySongs, Constitution, createMessage, CstSongReqAdd, CstSongReqRemove, CstSongResUpdate, CstSongReqUnsubscribe, EventType, extractMessageData, Message, Song, SongPlatform} from "chelys";
+import { canModifySongs, Constitution, createMessage, CstSongReqAdd, CstSongReqRemove, CstSongResUpdate, CstSongReqUnsubscribe, EventType, extractMessageData, Message, Song, SongPlatform } from "chelys";
 import { firestore } from "../firebase";
 import { isNil, max } from "lodash";
 import { Client } from "../../Types/client";
 import { SubModule } from "../module";
 import { telemetry } from "./telemetry";
+import { FS_CONSTITUTIONS_PATH } from "../utility";
 
 export class SongModule extends SubModule<Constitution> {
 	public prefix = "SONG";
@@ -13,19 +14,19 @@ export class SongModule extends SubModule<Constitution> {
 
 	private listeners: Set<Client> = new Set();
 
-	constructor(private constitution: Constitution) { 
+	constructor(private constitution: Constitution) {
 		super();
 		this.moduleMap.set(EventType.CST_SONG_add, this.add);
 		this.moduleMap.set(EventType.CST_SONG_remove, this.remove);
 		this.moduleMap.set(EventType.CST_SONG_get_all, this.getAll);
 		this.moduleMap.set(EventType.CST_SONG_unsubscribe, this.unsubscribe);
 
-		this.path = `matday/${constitution.id}/songs`;
+		this.path = `${FS_CONSTITUTIONS_PATH}/${constitution.id}/songs`;
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newSongData = change.doc.data() as Song;
-				const updateMessage = createMessage<CstSongResUpdate>(EventType.CST_SONG_update, {status: change.type, songInfo: newSongData});
+				const updateMessage = createMessage<CstSongResUpdate>(EventType.CST_SONG_update, { status: change.type, songInfo: newSongData });
 				switch (change.type) {
 					case "added":
 						this.songs.set(newSongData.id, newSongData);
@@ -33,9 +34,10 @@ export class SongModule extends SubModule<Constitution> {
 						break;
 
 					case "modified": {
-						telemetry.read(false);
 						const songData = this.songs.get(newSongData.id);
 						if (isNil(songData)) return;
+						this.songs.set(newSongData.id, newSongData);
+						telemetry.read(false);
 					} break;
 
 					case "removed":
@@ -44,12 +46,13 @@ export class SongModule extends SubModule<Constitution> {
 				}
 				this.listeners.forEach((listener) => {
 					listener.socket.send(updateMessage);
+					telemetry.read();
 				});
 			}
 		});
 	}
 
-	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> { 
+	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
 		const eventCallback = this.moduleMap.get(message.event);
 		if (eventCallback === undefined) {
 			return false;
@@ -59,13 +62,13 @@ export class SongModule extends SubModule<Constitution> {
 		return true;
 	}
 
-	public updateData(constitution: Constitution): void {
-		this.constitution = constitution;
-	}
-
 	public onClose(client: Client): void {
 		this.listeners.delete(client);
-		return; 
+		return;
+	}
+
+	public updateData(constitution: Constitution): void {
+		this.constitution = constitution;
 	}
 
 	private nextSongId(): number {
@@ -84,7 +87,7 @@ export class SongModule extends SubModule<Constitution> {
 		if (!this.constitution.users.includes(client.uid)) return;
 
 		const songData = requestData.songData;
-		
+
 		const song: Song = {
 			id: this.nextSongId(),
 			author: songData.author,
@@ -109,14 +112,14 @@ export class SongModule extends SubModule<Constitution> {
 		const song = this.songs.get(requestData.songId);
 		if (isNil(song)) return;
 		if (song.user !== client.uid) return;
-			
+
 		firestore.collection(this.path).doc(song.id.toString()).delete();
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		this.listeners.add(client);
 		this.songs.forEach((song) => {
-			client.socket.send(createMessage<CstSongResUpdate>(EventType.CST_SONG_update, {status: "added", songInfo: song}));
+			client.socket.send(createMessage<CstSongResUpdate>(EventType.CST_SONG_update, { status: "added", songInfo: song }));
 			telemetry.read();
 		});
 	}
