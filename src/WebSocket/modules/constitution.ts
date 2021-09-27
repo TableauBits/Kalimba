@@ -1,12 +1,17 @@
-import { Constitution, Message } from "chelys";
+import { Constitution, ConstitutionType, Message } from "chelys";
 import { SubModule } from "../module";
 import { Client } from "../../Types/client";
 import { SongModule } from "./song";
+import { GradeVoteModule } from "./vote-modules/grade";
 
 export class ConstitutionModule {
 	private submodules: SubModule<Constitution>[] = [];
 	constructor(public data: Constitution) {
 		this.submodules.push(new SongModule(data));
+		switch (data.type) {
+			case ConstitutionType.GRADE:
+				this.submodules.push(new GradeVoteModule(data));
+		}
 	}
 
 	public updateData(data: Constitution): void {

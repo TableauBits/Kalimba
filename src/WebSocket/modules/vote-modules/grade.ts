@@ -1,6 +1,6 @@
 import { firestore } from "../../firebase";
 import { SubModule } from "../../module";
-import { Constitution, createMessage, CstGradeReqEdit, CstGradeResSummaryUpdate, CstGradeResUserDataUpdate, EventType, extractMessageData, GradeSummary, GradeUserData, Message } from "chelys";
+import { Constitution, createMessage, CstGradeReqEdit, CstGradeReqGetSummary, CstGradeResSummaryUpdate, CstGradeResUserDataUpdate, EventType, extractMessageData, GradeSummary, GradeUserData, Message } from "chelys";
 import { FS_CONSTITUTIONS_PATH } from "../../utility";
 import { Client } from "../../../Types/client";
 import { telemetry } from "../telemetry";
@@ -31,6 +31,11 @@ export class GradeVoteModule extends SubModule<Constitution> {
 			for (const change of collection.docChanges()) {
 				if (change.doc.id === "summary") {
 					switch (change.type) {
+						case "added": {
+							const newSummary = change.doc.data() as GradeSummary;
+							this.summary = newSummary;
+						} break;
+
 						case "modified": {
 							telemetry.read(false);
 							const newSummary = change.doc.data() as GradeSummary;
@@ -95,24 +100,24 @@ export class GradeVoteModule extends SubModule<Constitution> {
 
 	public updateData(constitution: Constitution): void { this.constitution = constitution; }
 
-	private async edit(message: Message<unknown>, client: Client): Promise<void> {
-		const vote = extractMessageData<CstGradeReqEdit>(message).voteData;
-
+	private async edit(_: Message<unknown>, _1: Client): Promise<void> {
+		// const vote = extractMessageData<CstGradeReqEdit>(message).voteData;
 	}
 
-	private async getAll(message: Message<unknown>, client: Client): Promise<void> {
-
+	private async getAll(_: Message<unknown>, _1: Client): Promise<void> {
+		return;
 	}
 
-	private async getUser(message: Message<unknown>, client: Client): Promise<void> {
-
+	private async getUser(_: Message<unknown>, _1: Client): Promise<void> {
+		return;
 	}
 
-	private async getSummary(message: Message<unknown>, client: Client): Promise<void> {
-
+	private async getSummary(_: Message<unknown>, client: Client): Promise<void> {
+		this.summaryListeners.add(client);
+		client.socket.send(createMessage<CstGradeResSummaryUpdate>(EventType.CST_GRADE_summary_update, { summary: this.summary }));
 	}
 
-	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
-
+	private async unsubscribe(_: Message<unknown>, _1: Client): Promise<void> {
+		return;
 	}
 }

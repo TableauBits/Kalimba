@@ -1,4 +1,4 @@
-import { CltReqAuthenticate, EventType, Message, ResponseStatus } from "chelys";
+import { CltReqAuthenticate, EventType, extractMessageData, Message, ResponseStatus } from "chelys";
 import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
@@ -7,7 +7,7 @@ import { Module } from "./module";
 import { constitutionModule } from "./modules/constitution-manager";
 import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
-import { createMessage, extractMessageData } from "./utility";
+import { createMessage } from "./utility";
 
 // Telemetry HAS to be first!
 const modules: Module[] = [telemetry, userModule, constitutionModule];
