@@ -1,10 +1,12 @@
-import { canModifySongs, Constitution, createMessage, CstSongReqAdd, CstSongReqRemove, CstSongResUpdate, CstSongReqUnsubscribe, EventType, extractMessageData, Message, Song, SongPlatform } from "chelys";
+import { canModifySongs, Constitution, createMessage, CstSongReqAdd, CstSongReqRemove, CstSongResUpdate, CstSongReqUnsubscribe, EventType, extractMessageData, Message, Song, SongPlatform, ConstitutionType } from "chelys";
 import { firestore } from "../firebase";
 import { isNil, max } from "lodash";
 import { Client } from "../../Types/client";
 import { SubModule } from "../module";
 import { telemetry } from "./telemetry";
 import { FS_CONSTITUTIONS_PATH } from "../utility";
+import { VoteData } from "../../Types/vote-data";
+import { GradeVoteModule } from "./vote-modules/grade";
 
 export class SongModule extends SubModule<Constitution> {
 	public prefix = "SONG";
@@ -14,6 +16,8 @@ export class SongModule extends SubModule<Constitution> {
 
 	private listeners: Set<Client> = new Set();
 
+	private voteSubmodule: SubModule<VoteData>;
+
 	constructor(private constitution: Constitution) {
 		super();
 		this.moduleMap.set(EventType.CST_SONG_add, this.add);
@@ -22,6 +26,16 @@ export class SongModule extends SubModule<Constitution> {
 		this.moduleMap.set(EventType.CST_SONG_unsubscribe, this.unsubscribe);
 
 		this.path = `${FS_CONSTITUTIONS_PATH}/${constitution.id}/songs`;
+
+		switch (constitution.type) {
+			case ConstitutionType.GRADE: {
+				this.voteSubmodule = new GradeVoteModule({ constitution: this.constitution, songs: this.songs });
+			} break;
+
+			default: {
+				this.voteSubmodule = new GradeVoteModule({ constitution: this.constitution, songs: this.songs });
+			} break;
+		}
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
@@ -53,6 +67,10 @@ export class SongModule extends SubModule<Constitution> {
 	}
 
 	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
+		if (message.event.startsWith(`CST-${this.prefix}-${this.voteSubmodule.prefix}`)) {
+			return this.voteSubmodule.handleEvent(message, client);
+		}
+
 		const eventCallback = this.moduleMap.get(message.event);
 		if (eventCallback === undefined) {
 			return false;
