@@ -86,7 +86,9 @@ export class SongModule extends SubModule<Constitution> {
 	}
 
 	public updateData(constitution: Constitution): void {
+		console.log("update");
 		this.constitution = constitution;
+		this.voteSubmodule.updateData({ constitution: constitution, songs: this.songs });
 	}
 
 	private nextSongId(): number {

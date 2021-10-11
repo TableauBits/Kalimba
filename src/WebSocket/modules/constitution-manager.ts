@@ -143,10 +143,19 @@ class ConstitutionManagerModule extends Module {
 
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
 		const constitutionID = extractMessageData<CstReqJoin>(message).id;
-		if (isNil(constitutionID) || !this.constitutions.has(constitutionID)) return;
+		const constitution = this.constitutions.get(constitutionID);
+		if (isNil(constitutionID) || isNil(constitution)) return;
 
 		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
 		telemetry.write(false);
+
+		//@TODO(Ithyx): Make a callback map instead
+		switch (constitution.module.data.type) {
+			case ConstitutionType.GRADE: {
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/votes/${client.uid}`).create({ values: new Map() });
+				telemetry.write(false);
+			} break;
+		}
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
