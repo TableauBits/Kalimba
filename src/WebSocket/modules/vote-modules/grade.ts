@@ -1,4 +1,4 @@
-import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqEdit, GradeResSummaryUpdate, GradeResUserDataUpdate, GradeSummary, GradeUserData, Message } from "chelys";
+import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqEdit, GradeReqUnsubscribe, GradeResSummaryUpdate, GradeResUserDataUpdate, GradeSummary, GradeUserData, Message } from "chelys";
 import { inRange, isNil } from "lodash";
 import { Client } from "../../../Types/client";
 import { VoteData } from "../../../Types/vote-data";
@@ -23,6 +23,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		this.moduleMap.set(EventType.CST_SONG_GRADE_edit, this.edit);
 		this.moduleMap.set(EventType.CST_SONG_GRADE_get_user, this.getUser);
 		this.moduleMap.set(EventType.CST_SONG_GRADE_get_all, this.getAll);
+		this.moduleMap.set(EventType.CST_SONG_GRADE_unsubscribe, this.unsubscribe);
 
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).onSnapshot((document) => {
 			if (!document.exists) return;
@@ -53,6 +54,25 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		this.data = data;
 	}
 
+	private async getSummary(_: Message<unknown>, client: Client): Promise<void> {
+		this.summaryListeners.add(client);
+
+		client.socket.send(createMessage<GradeResSummaryUpdate>(EventType.CST_SONG_GRADE_summary_update, { summary: this.summary }));
+		telemetry.read();
+	}
+
+	private async edit(message: Message<unknown>, client: Client): Promise<void> {
+		const vote = extractMessageData<GradeReqEdit>(message).voteData;
+
+		const song = this.data.songs.get(vote.songId);
+		if (isNil(song)) return;
+		if (song.user === client.uid) return;		// An user can't vote for his own songs
+		if (!inRange(vote.grade, 1, 10)) return;
+
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${client.uid}`).update({ [`values.${vote.songId}`]: vote.grade });
+		telemetry.write(false);
+	}
+
 	private fetchUserData(uid: string): void {
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${uid}`).onSnapshot((document) => {
 			const newUserData = document.data() as GradeUserData;
@@ -68,29 +88,16 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		});
 	}
 
-	private async getSummary(_: Message<unknown>, client: Client): Promise<void> {
-		this.summaryListeners.add(client);
-
-		client.socket.send(createMessage<GradeResSummaryUpdate>(EventType.CST_SONG_GRADE_summary_update, { summary: this.summary }));
-		telemetry.read();
-	}
-
-	private async edit(message: Message<unknown>, client: Client): Promise<void> {
-		const vote = extractMessageData<GradeReqEdit>(message).voteData;
-
-		const song = this.data.songs.get(vote.songId);
-		if (isNil(song)) return;
-		if (song.user !== client.uid) return;
-		if (!inRange(vote.grade, 1, 10)) return;
-
-		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${client.uid}`).update({ [`values.${vote.songId}`]: vote.grade });
-		telemetry.write(false);
-	}
-
 	private async getUser(_: Message<unknown>, client: Client): Promise<void> {
 		if (!this.userDatas.has(client.uid)) {
-			this.fetchUserData(client.uid);
+			this.userDataListeners.set(client.uid, new Set<Client>());
 			this.userDataListeners.get(client.uid)?.add(client);
+			this.fetchUserData(client.uid);
+		} else {
+			this.userDataListeners.get(client.uid)?.add(client);
+			const userData = this.userDatas.get(client.uid);
+			if (isNil(userData)) return;
+			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
 		}
 	}
 
@@ -103,5 +110,17 @@ export class GradeVoteModule extends SubModule<VoteData> {
 				this.userDataListeners.get(user)?.add(client);
 			}
 		}
+	}
+
+	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
+		const requestData = extractMessageData<GradeReqUnsubscribe>(message);
+		if (isNil(requestData)) return;
+		if (requestData.cstId !== this.data.constitution.id) return;
+
+		this.userDataListeners.forEach((userDataListener) => {
+			if (userDataListener.has(client)) userDataListener.delete(client);
+		});
+
+		this.summaryListeners.delete(client);
 	}
 }
