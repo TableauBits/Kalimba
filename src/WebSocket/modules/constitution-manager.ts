@@ -152,7 +152,7 @@ class ConstitutionManagerModule extends Module {
 		//@TODO(Ithyx): Make a callback map instead
 		switch (constitution.module.data.type) {
 			case ConstitutionType.GRADE: {
-				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/votes/${client.uid}`).create({ values: new Map() });
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/votes/${client.uid}`).create({ uid: client.uid, values: new Map() });
 				telemetry.write(false);
 			} break;
 		}
