@@ -1,4 +1,4 @@
-import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqEdit, GradeReqUnsubscribe, GradeResSummaryUpdate, GradeSummary, Message, DocumentGradeUserData, DocumentGradeResUserDataUpdate } from "chelys";
+import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqEdit, GradeReqUnsubscribe, GradeResSummaryUpdate, Message, KGradeSummary, KGradeUserData, GradeResUserDataUpdate, Song } from "chelys";
 import { inRange, isNil, toString } from "lodash";
 import { Client } from "../../../Types/client";
 import { VoteData } from "../../../Types/vote-data";
@@ -10,10 +10,10 @@ import { telemetry } from "../telemetry";
 export class GradeVoteModule extends SubModule<VoteData> {
 	prefix = "GRADE";
 
-	private summary: GradeSummary = { voteCount: 0 };
+	private summary: KGradeSummary = { voteCount: 0, userCount: {} };
 	private summaryListeners: Set<Client> = new Set();
 
-	private userDatas: Map<string, DocumentGradeUserData> = new Map();
+	private userDatas: Map<string, KGradeUserData> = new Map();
 	private userDataListeners: Map<string, Set<Client>> = new Map();
 
 	constructor(private data: VoteData) {
@@ -27,7 +27,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).onSnapshot((document) => {
 			if (!document.exists) return;
-			this.summary = document.data() as GradeSummary;
+			this.summary = document.data() as KGradeSummary;
 			this.summaryListeners.forEach((listener) => {
 				listener.socket.send(createMessage<GradeResSummaryUpdate>(EventType.CST_SONG_GRADE_summary_update, { summary: this.summary }));
 				telemetry.read();
@@ -61,6 +61,23 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		telemetry.read();
 	}
 
+	private updateSummary(client: Client, song: Song) {
+		// Add the user if he is not in the summary
+		if (isNil(this.summary.userCount[client.uid])) {
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: 1 });
+		}
+
+		// If create a new vote, update the summary value
+		if (isNil(this.userDatas.get(client.uid)?.values[toString(song.id)])) {
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: this.summary.voteCount+1});
+			
+			const userCountValue = this.summary.userCount[client.uid];
+			const newValue = userCountValue ? userCountValue + 1 : 1 ;
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: newValue});
+		}
+
+	}
+
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
 		const vote = extractMessageData<GradeReqEdit>(message).voteData;
 
@@ -69,7 +86,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		if (song.user === client.uid) return;		// An user can't vote for his own songs
 		if (!inRange(vote.grade, 1, 10)) return;
 
-		if (isNil(this.userDatas.get(client.uid)?.values[toString(song.id)])) console.log("We should update the summary");
+		this.updateSummary(client, song);
 
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${client.uid}`).update({ [`values.${vote.songId}`]: vote.grade });
 		telemetry.write(false);
@@ -77,12 +94,12 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 	private fetchUserData(uid: string): void {
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${uid}`).onSnapshot((document) => {
-			const docData = document.data() as DocumentGradeUserData;
+			const docData = document.data() as KGradeUserData;
 			this.userDatas.set(uid, docData);
 			const listeners = this.userDataListeners.get(uid);
 			if (!isNil(listeners)) {
 				listeners.forEach((listener) => {
-					listener.socket.send(createMessage<DocumentGradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "modified", userData: docData }));
+					listener.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "modified", userData: docData }));
 				});
 				telemetry.read();
 			}
@@ -99,7 +116,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 			this.userDataListeners.get(client.uid)?.add(client);
 			const userData = this.userDatas.get(client.uid);
 			if (isNil(userData)) return;
-			client.socket.send(createMessage<DocumentGradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
+			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
 		}
 	}
 

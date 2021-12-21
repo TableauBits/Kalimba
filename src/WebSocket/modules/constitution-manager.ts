@@ -1,4 +1,4 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, GradeSummary, Message, Role } from "chelys";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, Role } from "chelys";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
@@ -132,7 +132,7 @@ class ConstitutionManagerModule extends Module {
 		//@TODO(Ithyx): Make a callback map instead
 		switch (constitution.type) {
 			case ConstitutionType.GRADE: {
-				const summary: GradeSummary = { voteCount: 0 };
+				const summary: KGradeSummary = { voteCount: 0, userCount: {} };
 				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/votes/summary`).create(summary);
 				telemetry.write(false);
 			} break;
