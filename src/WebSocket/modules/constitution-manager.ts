@@ -1,4 +1,4 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, Role } from "chelys";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, Role } from "chelys";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
@@ -29,6 +29,7 @@ class ConstitutionManagerModule extends Module {
 		this.moduleMap.set(EventType.CST_get_from_user, this.getFromUser);
 		this.moduleMap.set(EventType.CST_create, this.create);
 		this.moduleMap.set(EventType.CST_join, this.join);
+		this.moduleMap.set(EventType.CST_state, this.state);
 		this.moduleMap.set(EventType.CST_unsubscribe, this.unsubscribe);
 
 		firestore.collection(FS_CONSTITUTIONS_PATH).onSnapshot((collection) => {
@@ -156,6 +157,15 @@ class ConstitutionManagerModule extends Module {
 				telemetry.write(false);
 			} break;
 		}
+	}
+
+	private async state(message: Message<unknown>, client: Client): Promise<void> {
+		const req = extractMessageData<CstReqState>(message);
+		const cst = this.constitutions.get(req.id);
+		if (cst?.module.data.users[OWNER_INDEX] !== client.uid) return;
+
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(req.id).update({ state: req.state });		// TODO : Check if state is correct
+		telemetry.write(false);
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
