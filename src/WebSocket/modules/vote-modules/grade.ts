@@ -84,7 +84,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		const song = this.data.songs.get(vote.songId);
 		if (isNil(song)) return;
 		if (song.user === client.uid) return;		// An user can't vote for his own songs
-		if (!inRange(vote.grade, 1, 10)) return;
+		if (!inRange(vote.grade, 1, 11)) return;
 
 		this.updateSummary(client, song);
 
