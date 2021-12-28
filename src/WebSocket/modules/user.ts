@@ -1,9 +1,9 @@
-import { EventType, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
+import { EventType, extractMessageData, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore } from "../firebase";
 import { Module } from "../module";
-import { cleanupString, createMessage, extractMessageData } from "../utility";
+import { cleanupString, createMessage } from "../utility";
 import { telemetry } from "./telemetry";
 
 const FS_USERS_PATH = "users/";

@@ -1,11 +1,7 @@
-import { Message } from "chelys";
+export const FS_CONSTITUTIONS_PATH = "matday";
 
 export function createMessage<T>(event: string, data: T): string {
 	return JSON.stringify({ event: event, data: data });
-}
-
-export function extractMessageData<T>(message: Message<unknown>): T {
-	return message.data as T;
 }
 
 export function removeFromArray<T>(element: T, array: T[]): void {

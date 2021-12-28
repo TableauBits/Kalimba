@@ -1,14 +1,12 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqUnsubscribe, CstResUpdate, EventType, Message, Role } from "chelys";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, Role } from "chelys";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
 import { Module } from "../module";
-import { cleanupString, createMessage, extractMessageData } from "../utility";
+import { cleanupString, createMessage, FS_CONSTITUTIONS_PATH } from "../utility";
 import { telemetry } from "./telemetry";
 import { userModule } from "./user";
 import { ConstitutionModule } from "./constitution";
-
-const FS_CONSTITUTION_PATH = "matday/";
 
 interface SubscriptionData {
 	module: ConstitutionModule;
@@ -31,9 +29,10 @@ class ConstitutionManagerModule extends Module {
 		this.moduleMap.set(EventType.CST_get_from_user, this.getFromUser);
 		this.moduleMap.set(EventType.CST_create, this.create);
 		this.moduleMap.set(EventType.CST_join, this.join);
+		this.moduleMap.set(EventType.CST_state, this.state);
 		this.moduleMap.set(EventType.CST_unsubscribe, this.unsubscribe);
 
-		firestore.collection(FS_CONSTITUTION_PATH).onSnapshot((collection) => {
+		firestore.collection(FS_CONSTITUTIONS_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newConstitutionData = change.doc.data() as Constitution;
 				const updateMessage = createMessage<CstResUpdate>(EventType.CST_update, { cstInfo: newConstitutionData });
@@ -129,15 +128,43 @@ class ConstitutionManagerModule extends Module {
 
 		this.pendingListens.set(constitution.id, client);
 
-		firestore.collection(FS_CONSTITUTION_PATH).doc(constitution.id).create(constitution);
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitution.id).create(constitution);
+
+		//@TODO(Ithyx): Make a callback map instead
+		switch (constitution.type) {
+			case ConstitutionType.GRADE: {
+				const summary: KGradeSummary = { voteCount: 0, userCount: {} };
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/votes/summary`).create(summary);
+				telemetry.write(false);
+			} break;
+		}
+
 		telemetry.write(false);
 	}
 
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
 		const constitutionID = extractMessageData<CstReqJoin>(message).id;
-		if (isNil(constitutionID) || !this.constitutions.has(constitutionID)) return;
+		const constitution = this.constitutions.get(constitutionID);
+		if (isNil(constitutionID) || isNil(constitution)) return;
 
-		firestore.collection(FS_CONSTITUTION_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
+		telemetry.write(false);
+
+		//@TODO(Ithyx): Make a callback map instead
+		switch (constitution.module.data.type) {
+			case ConstitutionType.GRADE: {
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/votes/${client.uid}`).create({ uid: client.uid, values: {} });
+				telemetry.write(false);
+			} break;
+		}
+	}
+
+	private async state(message: Message<unknown>, client: Client): Promise<void> {
+		const req = extractMessageData<CstReqState>(message);
+		const cst = this.constitutions.get(req.id);
+		if (cst?.module.data.users[OWNER_INDEX] !== client.uid) return;
+
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(req.id).update({ state: req.state });		// TODO : Check if state is correct
 		telemetry.write(false);
 	}
 
