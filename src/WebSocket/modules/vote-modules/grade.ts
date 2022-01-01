@@ -109,8 +109,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 	private async getUser(_: Message<unknown>, client: Client): Promise<void> {
 		if (!this.userDatas.has(client.uid)) {
-			this.userDataListeners.set(client.uid, new Set<Client>());
-			this.userDataListeners.get(client.uid)?.add(client);
+			this.userDataListeners.set(client.uid, new Set<Client>([client]));
 			this.fetchUserData(client.uid);
 		} else {
 			this.userDataListeners.get(client.uid)?.add(client);
@@ -123,10 +122,14 @@ export class GradeVoteModule extends SubModule<VoteData> {
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		if (canModifyVotes(this.data.constitution)) return;
 
-		for (const user in this.data.constitution.users) {
-			if (!this.userDatas.has(user)) {
+		for (const user of this.data.constitution.users) {
+			const userData = this.userDatas.get(user);
+			if (isNil(userData)) {
+				this.userDataListeners.set(user, new Set<Client>([client]));
 				this.fetchUserData(user);
+			} else {
 				this.userDataListeners.get(user)?.add(client);
+				client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
 			}
 		}
 	}

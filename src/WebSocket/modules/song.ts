@@ -4,9 +4,12 @@ import { isNil, max } from "lodash";
 import { Client } from "../../Types/client";
 import { SubModule } from "../module";
 import { telemetry } from "./telemetry";
-import { FS_CONSTITUTIONS_PATH } from "../utility";
+import { cleanupString, FS_CONSTITUTIONS_PATH } from "../utility";
 import { VoteData } from "../../Types/vote-data";
 import { GradeVoteModule } from "./vote-modules/grade";
+
+const SONG_NAME_LENGTH = 35;	// TODO
+const SONG_AUTHOR_LENGTH = 20;
 
 export class SongModule extends SubModule<Constitution> {
 	public prefix = "SONG";
@@ -86,7 +89,6 @@ export class SongModule extends SubModule<Constitution> {
 	}
 
 	public updateData(constitution: Constitution): void {
-		console.log("update");
 		this.constitution = constitution;
 		this.voteSubmodule.updateData({ constitution: constitution, songs: this.songs });
 	}
@@ -105,14 +107,17 @@ export class SongModule extends SubModule<Constitution> {
 		if (requestData.cstId !== this.constitution.id) return;
 		if (!canModifySongs(this.constitution)) return;
 		if (!this.constitution.users.includes(client.uid)) return;
+		
+		const length = Array.from(this.songs.values()).filter((song) => {return song.user === client.uid; }).length;
+		if (length === this.constitution.numberOfSongsPerUser) return;
 
 		const songData = requestData.songData;
 
 		const song: Song = {
 			id: this.nextSongId(),
-			author: songData.author,
+			author: cleanupString(songData.author, SONG_AUTHOR_LENGTH),
 			platform: songData.platform ?? SongPlatform.YOUTUBE,
-			title: songData.title,
+			title: cleanupString(songData.title, SONG_NAME_LENGTH),
 			url: songData.url,
 			user: client.uid
 		};

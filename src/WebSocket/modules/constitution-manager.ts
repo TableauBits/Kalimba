@@ -89,6 +89,8 @@ class ConstitutionManagerModule extends Module {
 		//  * public constitutions
 		//  * constitutions they are already a member of
 
+		this.allConstitutionsListener.add(client);
+
 		this.constitutions.forEach((constitution) => {
 			const { isPublic, users } = constitution.module.data;
 			if (isPublic || users.includes(client.uid)) {
@@ -136,6 +138,9 @@ class ConstitutionManagerModule extends Module {
 				const summary: KGradeSummary = { voteCount: 0, userCount: {} };
 				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/votes/summary`).create(summary);
 				telemetry.write(false);
+
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/votes/${client.uid}`).create({ uid: client.uid, values: {} });
+				telemetry.write(false);
 			} break;
 		}
 
@@ -169,6 +174,8 @@ class ConstitutionManagerModule extends Module {
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
+		this.allConstitutionsListener.delete(client);
+		
 		const uids = extractMessageData<CstReqUnsubscribe>(message).ids;
 		for (const uid of uids) {
 			const constitution = this.constitutions.get(uid);
