@@ -8,7 +8,7 @@ import { cleanupString, FS_CONSTITUTIONS_PATH } from "../utility";
 import { VoteData } from "../../Types/vote-data";
 import { GradeVoteModule } from "./vote-modules/grade";
 
-const SONG_NAME_LENGTH = 35;	// TODO
+const SONG_NAME_LENGTH = 30;	// TODO
 const SONG_AUTHOR_LENGTH = 20;
 
 export class SongModule extends SubModule<Constitution> {
@@ -31,10 +31,7 @@ export class SongModule extends SubModule<Constitution> {
 		this.path = `${FS_CONSTITUTIONS_PATH}/${constitution.id}/songs`;
 
 		switch (constitution.type) {
-			case ConstitutionType.GRADE: {
-				this.voteSubmodule = new GradeVoteModule({ constitution: this.constitution, songs: this.songs });
-			} break;
-
+			case ConstitutionType.GRADE:
 			default: {
 				this.voteSubmodule = new GradeVoteModule({ constitution: this.constitution, songs: this.songs });
 			} break;
