@@ -82,7 +82,7 @@ export class SongModule extends SubModule<Constitution> {
 
 	public onClose(client: Client): void {
 		this.listeners.delete(client);
-		return;
+		this.voteSubmodule.onClose(client);
 	}
 
 	public updateData(constitution: Constitution): void {
@@ -104,8 +104,8 @@ export class SongModule extends SubModule<Constitution> {
 		if (requestData.cstId !== this.constitution.id) return;
 		if (!canModifySongs(this.constitution)) return;
 		if (!this.constitution.users.includes(client.uid)) return;
-		
-		const length = Array.from(this.songs.values()).filter((song) => {return song.user === client.uid; }).length;
+
+		const length = Array.from(this.songs.values()).filter((song) => { return song.user === client.uid; }).length;
 		if (length === this.constitution.numberOfSongsPerUser) return;
 
 		const songData = requestData.songData;

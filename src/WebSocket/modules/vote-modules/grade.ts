@@ -69,11 +69,12 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 		// If create a new vote, update the summary value
 		if (isNil(this.userDatas.get(client.uid)?.values[toString(song.id)])) {
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: this.summary.voteCount+1});
-			
+			// firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: firestoreTypes.FieldValue.increment(1)}); ?
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ voteCount: this.summary.voteCount + 1 });
+
 			const userCountValue = this.summary.userCount[client.uid];
-			const newValue = userCountValue ? userCountValue + 1 : 1 ;
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: newValue});
+			const newValue = userCountValue ? userCountValue + 1 : 1;
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: newValue });
 		}
 
 	}
@@ -115,7 +116,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 			this.userDataListeners.get(client.uid)?.add(client);
 			const userData = this.userDatas.get(client.uid);
 			if (isNil(userData)) return;
-			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
+			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
 		}
 	}
 
@@ -129,7 +130,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 				this.fetchUserData(user);
 			} else {
 				this.userDataListeners.get(user)?.add(client);
-				client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
+				client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
 			}
 		}
 	}

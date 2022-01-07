@@ -2,11 +2,13 @@ import { Constitution, Message } from "chelys";
 import { SubModule } from "../module";
 import { Client } from "../../Types/client";
 import { SongModule } from "./song";
+import { FavoriteModule } from "./favorite";
 
 export class ConstitutionModule {
 	private submodules: SubModule<Constitution>[] = [];
 	constructor(public data: Constitution) {
 		this.submodules.push(new SongModule(data));
+		this.submodules.push(new FavoriteModule(data));
 	}
 
 	public updateData(data: Constitution): void {

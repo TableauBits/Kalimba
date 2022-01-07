@@ -1,19 +1,22 @@
-import { Constitution, createMessage, CstFavResUpdate, EventType, Message, UserFavorites } from "chelys";
-import { firestore } from "../firebase";
+import { areResultsPublic, Constitution, createMessage, CstFavReqAdd, CstFavResUpdate, EventType, extractMessageData, Message, UserFavorites } from "chelys";
+import { firestore, firestoreTypes } from "../firebase";
 import { Client } from "../../Types/client";
 import { SubModule } from "../module";
 import { FS_CONSTITUTIONS_PATH } from "../utility";
+import { telemetry } from "./telemetry";
+import { isNil } from "lodash";
 
 export class FavoriteModule extends SubModule<Constitution> {
 	public prefix = "FAV";
 
 	private path = "";
 	private favorites: Map<string, UserFavorites> = new Map();
-	
+
+	private listeners: Set<Client> = new Set();
+
 	constructor(private constitution: Constitution) {
 		super();
-		this.constitution = constitution;
-		
+
 		this.moduleMap.set(EventType.CST_FAV_add, this.add);
 		this.moduleMap.set(EventType.CST_FAV_remove, this.remove);
 		this.moduleMap.set(EventType.CST_FAV_get, this.get);
@@ -24,27 +27,29 @@ export class FavoriteModule extends SubModule<Constitution> {
 		firestore.collection(this.path).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newFavData = change.doc.data() as UserFavorites;
-				const updateMessage = createMessage<CstFavResUpdate>(EventType., { status: change.type, songInfo: newSongData });
+				const updateMessage = createMessage<CstFavResUpdate>(EventType.CST_FAV_update, { userFavorites: newFavData });
 				switch (change.type) {
 					case "added":
-						this.favorites.set(newFavData.id, newSongData);
+						this.favorites.set(newFavData.uid, newFavData);
 						telemetry.read(false);
 						break;
 
 					case "modified": {
-						const songData = this.songs.get(newSongData.id);
-						if (isNil(songData)) return;
-						this.songs.set(newSongData.id, newSongData);
+						const favData = this.favorites.get(newFavData.uid);
+						if (isNil(favData)) return;
+						this.favorites.set(newFavData.uid, newFavData);
 						telemetry.read(false);
 					} break;
 
 					case "removed":
-						this.songs.delete(newSongData.id);
+						this.favorites.delete(newFavData.uid);
 						break;
 				}
 				this.listeners.forEach((listener) => {
-					listener.socket.send(updateMessage);
-					telemetry.read();
+					if (areResultsPublic(this.constitution) || listener.uid === newFavData.uid) {
+						listener.socket.send(updateMessage);
+						telemetry.read();
+					}
 				});
 			}
 		});
@@ -60,32 +65,49 @@ export class FavoriteModule extends SubModule<Constitution> {
 		return true;
 	}
 
-	public onClose(_: Client): void {
-		// TODO
-		return;
+	public onClose(client: Client): void {
+		this.listeners.delete(client);
 	}
 
 	public updateData(data: Constitution): void {
+		if (this.constitution.state !== data.state) {
+			this.favorites.forEach((favorite) => {
+				const updateMessage = createMessage<CstFavResUpdate>(EventType.CST_FAV_update, { userFavorites: favorite });
+				this.listeners.forEach((listener) => {
+					if (areResultsPublic(this.constitution) || listener.uid !== favorite.uid) {
+						listener.socket.send(updateMessage);
+						telemetry.read();
+					}
+				});
+			});
+		}
 		this.constitution = data;
 	}
 
 	private async add(message: Message<unknown>, client: Client): Promise<void> {
-		// TODO
-		return;
+		const newFav = extractMessageData<CstFavReqAdd>(message);
+		firestore.collection(this.path).doc(client.uid).update({ values: firestoreTypes.FieldValue.arrayUnion(newFav.songId) });
 	}
 
 	private async remove(message: Message<unknown>, client: Client): Promise<void> {
-		// TODO
-		return;
+		const favToRemove = extractMessageData<CstFavReqAdd>(message);
+		firestore.collection(this.path).doc(client.uid).update({ values: firestoreTypes.FieldValue.arrayRemove(favToRemove.songId) });
 	}
 
-	private async get(message: Message<unknown>, client: Client): Promise<void> {
-		// TODO
-		return;
+	private async get(_: Message<unknown>, client: Client): Promise<void> {
+		this.listeners.add(client);
+
+		this.favorites.forEach((favorite) => {
+			const updateMessage = createMessage<CstFavResUpdate>(EventType.CST_FAV_update, { userFavorites: favorite });
+			if (areResultsPublic(this.constitution) || client.uid === favorite.uid) {
+				client.socket.send(updateMessage);
+				telemetry.read();
+			}
+		});
 	}
 
-	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
-		// TODO
+	private async unsubscribe(_: Message<unknown>, client: Client): Promise<void> {
+		this.listeners.delete(client);
 		return;
 	}
 }
