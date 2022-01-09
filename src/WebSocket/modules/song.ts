@@ -9,7 +9,7 @@ import { VoteData } from "../../Types/vote-data";
 import { GradeVoteModule } from "./vote-modules/grade";
 
 const SONG_NAME_LENGTH = 30;	// TODO
-const SONG_AUTHOR_LENGTH = 20;
+const SONG_AUTHOR_LENGTH = 30;
 
 export class SongModule extends SubModule<Constitution> {
 	public prefix = "SONG";

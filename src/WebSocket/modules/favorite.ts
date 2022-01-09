@@ -1,4 +1,4 @@
-import { areResultsPublic, Constitution, createMessage, CstFavReqAdd, CstFavResUpdate, EventType, extractMessageData, Message, UserFavorites } from "chelys";
+import { areResultsPublic, canModifyVotes, Constitution, createMessage, CstFavReqAdd, CstFavResUpdate, EventType, extractMessageData, FAVORITES_MAX_LENGTH, Message, UserFavorites } from "chelys";
 import { firestore, firestoreTypes } from "../firebase";
 import { Client } from "../../Types/client";
 import { SubModule } from "../module";
@@ -85,13 +85,18 @@ export class FavoriteModule extends SubModule<Constitution> {
 	}
 
 	private async add(message: Message<unknown>, client: Client): Promise<void> {
+		if (!canModifyVotes(this.constitution)) return;
+		const favorites = this.favorites.get(client.uid);
+		if (isNil(favorites)) return;
+		if (favorites.favs.length >= FAVORITES_MAX_LENGTH) return;
+		
 		const newFav = extractMessageData<CstFavReqAdd>(message);
-		firestore.collection(this.path).doc(client.uid).update({ values: firestoreTypes.FieldValue.arrayUnion(newFav.songId) });
+		firestore.collection(this.path).doc(client.uid).update({ favs: firestoreTypes.FieldValue.arrayUnion(newFav.songId) });
 	}
 
 	private async remove(message: Message<unknown>, client: Client): Promise<void> {
 		const favToRemove = extractMessageData<CstFavReqAdd>(message);
-		firestore.collection(this.path).doc(client.uid).update({ values: firestoreTypes.FieldValue.arrayRemove(favToRemove.songId) });
+		firestore.collection(this.path).doc(client.uid).update({ favs: firestoreTypes.FieldValue.arrayRemove(favToRemove.songId) });
 	}
 
 	private async get(_: Message<unknown>, client: Client): Promise<void> {

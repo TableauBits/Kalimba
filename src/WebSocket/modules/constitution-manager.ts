@@ -131,6 +131,7 @@ class ConstitutionManagerModule extends Module {
 		this.pendingListens.set(constitution.id, client);
 
 		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitution.id).create(constitution);
+		telemetry.write(false);
 
 		//@TODO(Ithyx): Make a callback map instead
 		switch (constitution.type) {
@@ -144,6 +145,7 @@ class ConstitutionManagerModule extends Module {
 			} break;
 		}
 
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
 	}
 
@@ -162,6 +164,9 @@ class ConstitutionManagerModule extends Module {
 				telemetry.write(false);
 			} break;
 		}
+
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
+		telemetry.write(false);
 	}
 
 	private async state(message: Message<unknown>, client: Client): Promise<void> {
