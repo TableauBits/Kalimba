@@ -1,5 +1,5 @@
 import { Module } from "../module";
-import { createMessage, extractMessageData, Message, ResponseStatus, Role } from "@tableaubits/hang";
+import { createMessage, extractMessageData, Message, ResponseStatus, Role } from "chelys";
 import { Client } from "../../Types/client";
 import { userModule } from "./user";
 import { isNil } from "lodash";

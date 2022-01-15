@@ -1,4 +1,4 @@
-import { Message } from "@tableaubits/hang";
+import { Message } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { Module } from "../module";

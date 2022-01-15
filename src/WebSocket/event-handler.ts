@@ -1,4 +1,4 @@
-import { CltReqAuthenticate, EventType, Message, ResponseStatus, createMessage, extractMessageData } from "@tableaubits/hang";
+import { CltReqAuthenticate, EventType, Message, ResponseStatus, createMessage, extractMessageData } from "chelys";
 import { isNil } from "lodash";
 import WebSocket from "ws";
 import { Client } from "../Types/client";
