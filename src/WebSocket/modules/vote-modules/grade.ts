@@ -2,7 +2,7 @@ import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqE
 import { inRange, isNil, toString } from "lodash";
 import { Client } from "../../../Types/client";
 import { VoteData } from "../../../Types/vote-data";
-import { firestore } from "../../firebase";
+import { firestore, firestoreTypes } from "../../firebase";
 import { SubModule } from "../../module";
 import { FS_CONSTITUTIONS_PATH } from "../../utility";
 import { telemetry } from "../telemetry";
@@ -69,8 +69,7 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 		// If create a new vote, update the summary value
 		if (isNil(this.userDatas.get(client.uid)?.values[toString(song.id)])) {
-			// firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: firestoreTypes.FieldValue.increment(1)}); ?
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ voteCount: this.summary.voteCount + 1 });
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: firestoreTypes.FieldValue.increment(1)});
 
 			const userCountValue = this.summary.userCount[client.uid];
 			const newValue = userCountValue ? userCountValue + 1 : 1;
