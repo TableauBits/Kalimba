@@ -2,7 +2,7 @@ import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqE
 import { inRange, isNil, toString } from "lodash";
 import { Client } from "../../../Types/client";
 import { VoteData } from "../../../Types/vote-data";
-import { firestore } from "../../firebase";
+import { firestore, firestoreTypes } from "../../firebase";
 import { SubModule } from "../../module";
 import { FS_CONSTITUTIONS_PATH } from "../../utility";
 import { telemetry } from "../telemetry";
@@ -69,11 +69,11 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 		// If create a new vote, update the summary value
 		if (isNil(this.userDatas.get(client.uid)?.values[toString(song.id)])) {
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: this.summary.voteCount+1});
-			
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: firestoreTypes.FieldValue.increment(1)});
+
 			const userCountValue = this.summary.userCount[client.uid];
-			const newValue = userCountValue ? userCountValue + 1 : 1 ;
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: newValue});
+			const newValue = userCountValue ? userCountValue + 1 : 1;
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: newValue });
 		}
 
 	}
@@ -109,24 +109,27 @@ export class GradeVoteModule extends SubModule<VoteData> {
 
 	private async getUser(_: Message<unknown>, client: Client): Promise<void> {
 		if (!this.userDatas.has(client.uid)) {
-			this.userDataListeners.set(client.uid, new Set<Client>());
-			this.userDataListeners.get(client.uid)?.add(client);
+			this.userDataListeners.set(client.uid, new Set<Client>([client]));
 			this.fetchUserData(client.uid);
 		} else {
 			this.userDataListeners.get(client.uid)?.add(client);
 			const userData = this.userDatas.get(client.uid);
 			if (isNil(userData)) return;
-			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData })); 
+			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
 		}
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		if (canModifyVotes(this.data.constitution)) return;
 
-		for (const user in this.data.constitution.users) {
-			if (!this.userDatas.has(user)) {
+		for (const user of this.data.constitution.users) {
+			const userData = this.userDatas.get(user);
+			if (isNil(userData)) {
+				this.userDataListeners.set(user, new Set<Client>([client]));
 				this.fetchUserData(user);
+			} else {
 				this.userDataListeners.get(user)?.add(client);
+				client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
 			}
 		}
 	}

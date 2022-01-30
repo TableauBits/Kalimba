@@ -89,6 +89,8 @@ class ConstitutionManagerModule extends Module {
 		//  * public constitutions
 		//  * constitutions they are already a member of
 
+		this.allConstitutionsListener.add(client);
+
 		this.constitutions.forEach((constitution) => {
 			const { isPublic, users } = constitution.module.data;
 			if (isPublic || users.includes(client.uid)) {
@@ -129,6 +131,7 @@ class ConstitutionManagerModule extends Module {
 		this.pendingListens.set(constitution.id, client);
 
 		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitution.id).create(constitution);
+		telemetry.write(false);
 
 		//@TODO(Ithyx): Make a callback map instead
 		switch (constitution.type) {
@@ -136,9 +139,13 @@ class ConstitutionManagerModule extends Module {
 				const summary: KGradeSummary = { voteCount: 0, userCount: {} };
 				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/votes/summary`).create(summary);
 				telemetry.write(false);
+
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/votes/${client.uid}`).create({ uid: client.uid, values: {} });
+				telemetry.write(false);
 			} break;
 		}
 
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
 	}
 
@@ -157,6 +164,9 @@ class ConstitutionManagerModule extends Module {
 				telemetry.write(false);
 			} break;
 		}
+
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
+		telemetry.write(false);
 	}
 
 	private async state(message: Message<unknown>, client: Client): Promise<void> {
@@ -169,6 +179,8 @@ class ConstitutionManagerModule extends Module {
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
+		this.allConstitutionsListener.delete(client);
+		
 		const uids = extractMessageData<CstReqUnsubscribe>(message).ids;
 		for (const uid of uids) {
 			const constitution = this.constitutions.get(uid);
