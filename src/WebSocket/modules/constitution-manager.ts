@@ -1,4 +1,4 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, Role } from "chelys";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstResJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, ResponseStatus, Role } from "chelys";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
@@ -152,7 +152,33 @@ class ConstitutionManagerModule extends Module {
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
 		const constitutionID = extractMessageData<CstReqJoin>(message).id;
 		const constitution = this.constitutions.get(constitutionID);
-		if (isNil(constitutionID) || isNil(constitution)) return;
+		
+		if (isNil(constitutionID) || isNil(constitution)) {
+			const response: ResponseStatus = {
+				success: false,
+				status: "no_constitution",
+			};
+			client.socket.send(createMessage<CstResJoin>(EventType.CST_join, {status: response}));
+			return;
+		}
+
+		if (constitution.module.data.maxUserCount === constitution.module.data.users.length) {
+			const response: ResponseStatus = {
+				success: false,
+				status: "constitution_full",
+			};
+			client.socket.send(createMessage<CstResJoin>(EventType.CST_join, {status: response}));
+			return;
+		}
+		
+		if (constitution.module.data.users.includes(client.uid)) {
+			const response: ResponseStatus = {
+				success: false,
+				status: "already_here",
+			};
+			client.socket.send(createMessage<CstResJoin>(EventType.CST_join, {status: response}));
+			return;
+		}
 
 		firestore.collection(FS_CONSTITUTIONS_PATH).doc(constitutionID).update({ users: firestoreTypes.FieldValue.arrayUnion(client.uid) });
 		telemetry.write(false);
@@ -167,6 +193,13 @@ class ConstitutionManagerModule extends Module {
 
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
+    
+		const response: ResponseStatus = {
+			success: true,
+			status: "",
+		};
+		client.socket.send(createMessage<CstResJoin>(EventType.CST_join, {status: response}));
+
 	}
 
 	private async state(message: Message<unknown>, client: Client): Promise<void> {
