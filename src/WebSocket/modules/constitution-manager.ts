@@ -193,12 +193,13 @@ class ConstitutionManagerModule extends Module {
 
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
-
+    
 		const response: ResponseStatus = {
 			success: true,
 			status: "",
 		};
 		client.socket.send(createMessage<CstResJoin>(EventType.CST_join, {status: response}));
+
 	}
 
 	private async state(message: Message<unknown>, client: Client): Promise<void> {
