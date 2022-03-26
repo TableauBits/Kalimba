@@ -1,4 +1,4 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstResJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, ResponseStatus, Role } from "chelys";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstResJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, ResponseStatus, Role, CstReqNameURL } from "chelys";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
@@ -7,6 +7,8 @@ import { cleanupString, createMessage, FS_CONSTITUTIONS_PATH } from "../utility"
 import { telemetry } from "./telemetry";
 import { userModule } from "./user";
 import { ConstitutionModule } from "./constitution";
+
+const NAME_MAX_LENGTH = 30;
 
 interface SubscriptionData {
 	module: ConstitutionModule;
@@ -29,6 +31,7 @@ class ConstitutionManagerModule extends Module {
 		this.moduleMap.set(EventType.CST_get_from_user, this.getFromUser);
 		this.moduleMap.set(EventType.CST_create, this.create);
 		this.moduleMap.set(EventType.CST_join, this.join);
+		this.moduleMap.set(EventType.CST_name_url, this.nameURL);
 		this.moduleMap.set(EventType.CST_state, this.state);
 		this.moduleMap.set(EventType.CST_unsubscribe, this.unsubscribe);
 
@@ -110,8 +113,6 @@ class ConstitutionManagerModule extends Module {
 		if (isNil(user) || !user.data.roles.includes(Role.ADMIN)) return;
 		if (requestData.type ?? ConstitutionType.LENGTH >= ConstitutionType.LENGTH) return;
 		if (isNil(requestData.playlistLink)) return;
-
-		const NAME_MAX_LENGTH = 30;
 
 		const constitution: Constitution = {
 			id: createID(),
@@ -200,6 +201,18 @@ class ConstitutionManagerModule extends Module {
 		};
 		client.socket.send(createMessage<CstResJoin>(EventType.CST_join, {status: response}));
 
+	}
+
+	private async nameURL(message: Message<unknown>, client: Client): Promise<void> {
+		const req = extractMessageData<CstReqNameURL>(message);
+		const cst = this.constitutions.get(req.id);
+		if (cst?.module.data.users[OWNER_INDEX] !== client.uid) return;
+
+		firestore.collection(FS_CONSTITUTIONS_PATH).doc(req.id).update({
+			name: req.name ? cleanupString(req.name, NAME_MAX_LENGTH) : cst.module.data.name,
+			playlistLink : req.url ? req.url : cst.module.data.playlistLink
+		});
+		telemetry.write(false);
 	}
 
 	private async state(message: Message<unknown>, client: Client): Promise<void> {
