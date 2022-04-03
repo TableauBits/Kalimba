@@ -1,4 +1,4 @@
-import { EventType, extractMessageData, Message, Role, User, UsrReqEdit, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
+import { EventType, extractMessageData, Message, Role, User, UsrReqEditProfile, UsrReqEditRoles, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore } from "../firebase";
@@ -26,7 +26,8 @@ class UserModule extends Module {
 		super();
 		this.moduleMap.set(EventType.USER_get, this.get);
 		this.moduleMap.set(EventType.USER_get_all, this.getAll);
-		this.moduleMap.set(EventType.USER_edit, this.edit);
+		this.moduleMap.set(EventType.USER_edit_profile, this.editProfile);
+		this.moduleMap.set(EventType.USER_edit_roles, this.editRoles);
 		this.moduleMap.set(EventType.USER_create, this.create);
 		this.moduleMap.set(EventType.USER_unsubscribe, this.unsubscribe);
 
@@ -85,8 +86,8 @@ class UserModule extends Module {
 		});
 	}
 
-	private async edit(message: Message<unknown>, client: Client): Promise<void> {
-		const requestData = extractMessageData<UsrReqEdit>(message).userData;
+	private async editProfile(message: Message<unknown>, client: Client): Promise<void> {
+		const requestData = extractMessageData<UsrReqEditProfile>(message).userData;
 		const localUser = this.users.get(requestData.uid);
 		if (client.uid !== requestData.uid || isNil(localUser)) {
 			return;
@@ -102,8 +103,25 @@ class UserModule extends Module {
 		telemetry.write(false);
 	}
 
+	private async editRoles(message: Message<unknown>, client: Client): Promise<void> {
+		// Check if client has permission to edit roles
+		const clientUser = this.users.get(client.uid);
+		if (!clientUser?.data.roles.includes(Role.DEV)) return;
+
+		const requestData = extractMessageData<UsrReqEditRoles>(message);
+
+		// Should fail if doesn't contain roles
+		if (requestData.roles.length === 0) return;
+
+		firestore.collection(FS_USERS_PATH).doc(requestData.uid).update({
+			roles: requestData.roles
+		});
+		telemetry.write(false);
+	}
+
+	// TODO : À voir si toujours pertinent avec les invites
 	private async create(message: Message<unknown>, client: Client): Promise<void> {
-		const requestData = extractMessageData<UsrReqEdit>(message).userData;
+		const requestData = extractMessageData<UsrReqEditProfile>(message).userData;
 		if (isNil(requestData)
 			|| client.uid !== requestData.uid
 			|| isNil(requestData.email)
