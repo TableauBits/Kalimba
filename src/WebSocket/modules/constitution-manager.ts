@@ -8,7 +8,7 @@ import { telemetry } from "./telemetry";
 import { userModule } from "./user";
 import { ConstitutionModule } from "./constitution";
 
-const NAME_MAX_LENGTH = 30;
+const NAME_MAX_LENGTH = 100;
 
 interface SubscriptionData {
 	module: ConstitutionModule;
