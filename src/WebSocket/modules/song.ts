@@ -8,8 +8,8 @@ import { cleanupString, FS_CONSTITUTIONS_PATH } from "../utility";
 import { VoteData } from "../../Types/vote-data";
 import { GradeVoteModule } from "./vote-modules/grade";
 
-const SONG_NAME_LENGTH = 30;	// TODO
-const SONG_AUTHOR_LENGTH = 30;
+const SONG_NAME_LENGTH = 100;	// TODO
+const SONG_AUTHOR_LENGTH = 100;
 
 export class SongModule extends SubModule<Constitution> {
 	public prefix = "SONG";
