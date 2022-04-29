@@ -1,13 +1,7 @@
 import * as admin from "firebase-admin";
+import { ENCRYPTED_ADMIN_SAK } from "../constants";
 
-const encryptedAdminSAK = process.env["MATBAY_SERVICE_ACCOUNT_KEY"];
-
-if (encryptedAdminSAK == undefined) {
-	console.log("Unable to start server: firebase admin service acount key not found in ENV: MATBAY_SERVICE_ACCOUNT_KEY");
-	process.exit(-1);
-}
-
-const adminSAK = JSON.parse(Buffer.from(encryptedAdminSAK, "base64").toString());
+const adminSAK = JSON.parse(Buffer.from(ENCRYPTED_ADMIN_SAK, "base64").toString());
 
 admin.initializeApp({
 	credential: admin.credential.cert(adminSAK),

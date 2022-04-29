@@ -17,6 +17,7 @@
 		"@types/ws": "^7.4.5",
 		"@typescript-eslint/eslint-plugin": "^4.23.0",
 		"@typescript-eslint/parser": "^4.23.0",
+		"axios": "^0.27.2",
 		"bufferutil": "^4.0.3",
 		"chelys": "^2.5.0",
 		"copyfiles": "^2.4.1",
