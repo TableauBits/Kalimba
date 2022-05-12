@@ -18,7 +18,7 @@
 		"@typescript-eslint/eslint-plugin": "^4.23.0",
 		"@typescript-eslint/parser": "^4.23.0",
 		"bufferutil": "^4.0.3",
-		"chelys": "^2.5.0",
+		"chelys": "^2.7.1",
 		"copyfiles": "^2.4.1",
 		"cors": "^2.8.5",
 		"dotenv": "^10.0.0",
