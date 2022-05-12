@@ -164,7 +164,8 @@ class ConstitutionManagerModule extends Module {
 
 		if (constitution.module.data.users[OWNER_INDEX] !== client.uid) return;		// only the owner can delete a constitution
 
-		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.module.data.id}`).delete();
+		const doc = firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.module.data.id}`);
+		firestore.recursiveDelete(doc);
 	}
 
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
