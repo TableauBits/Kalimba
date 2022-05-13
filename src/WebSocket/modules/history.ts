@@ -1,4 +1,4 @@
-import { createMessage, EventType, History, HistoryResGet, Message } from "chelys";
+import { createMessage, EventType, History, HistoryResUpdate, Message } from "chelys";
 import { Client } from "../../Types/client";
 import { firestore } from "../firebase";
 import { Module } from "../module";
@@ -14,7 +14,7 @@ export class HistoryModule extends Module {
 	constructor() {
 		super();
 
-		this.moduleMap.set(EventType.HISTORY_get, this.getAll);
+		this.moduleMap.set(EventType.HISTORY_get_all, this.getAll);
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			collection.docChanges().forEach((change) => {
@@ -24,7 +24,7 @@ export class HistoryModule extends Module {
 						this.pantheon.set(data.id, data);
 						telemetry.read(false);
 						this.listeners.forEach((listener) => {
-							listener.socket.send(createMessage<HistoryResGet>(EventType.HISTORY_update, {history: data}));
+							listener.socket.send(createMessage<HistoryResUpdate>(EventType.HISTORY_update, {history: data}));
 						});
 					// TODO : case modified / deleted ?
 				}
@@ -49,7 +49,7 @@ export class HistoryModule extends Module {
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		this.listeners.add(client);
 		this.pantheon.forEach((history) => {
-			const updateMessage = createMessage<HistoryResGet>(EventType.HISTORY_update, {history});
+			const updateMessage = createMessage<HistoryResUpdate>(EventType.HISTORY_update, {history});
 			client.socket.send(updateMessage);
 			telemetry.read();
 		});
