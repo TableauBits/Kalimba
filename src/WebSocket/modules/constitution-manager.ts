@@ -1,4 +1,4 @@
-import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstResJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, ResponseStatus, Role, CstReqNameURL } from "chelys";
+import { Constitution, ConstitutionType, CstReqCreate, CstReqGet, CstReqJoin, CstResJoin, CstReqState, CstReqUnsubscribe, CstResUpdate, EventType, extractMessageData, KGradeSummary, Message, OWNER_INDEX, ResponseStatus, Role, CstReqNameURL, CstReqDelete, CstResDelete } from "chelys";
 import { clamp, isNil } from "lodash";
 import { Client } from "../../Types/client";
 import { createID, firestore, firestoreTypes } from "../firebase";
@@ -34,6 +34,7 @@ class ConstitutionManagerModule extends Module {
 		this.moduleMap.set(EventType.CST_name_url, this.nameURL);
 		this.moduleMap.set(EventType.CST_state, this.state);
 		this.moduleMap.set(EventType.CST_unsubscribe, this.unsubscribe);
+		this.moduleMap.set(EventType.CST_delete, this.delete);
 
 		firestore.collection(FS_CONSTITUTIONS_PATH).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
@@ -57,7 +58,12 @@ class ConstitutionManagerModule extends Module {
 
 					case "removed":
 						// @TODO(Ithyx): Send deletion event (or something idk)
+						this.constitutions.get(newConstitutionData.id)?.listeners.forEach((listener) => {
+							listener.socket.send((createMessage<CstResDelete>(EventType.CST_delete, {id: newConstitutionData.id})));
+						});
+
 						this.constitutions.delete(newConstitutionData.id);
+
 						break;
 
 					case "modified": {
@@ -148,6 +154,18 @@ class ConstitutionManagerModule extends Module {
 
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
+	}
+
+	private async delete(message: Message<unknown>, client: Client): Promise<void> {
+		const constitutionID = extractMessageData<CstReqDelete>(message).id;
+		const constitution = this.constitutions.get(constitutionID);
+
+		if (isNil(constitutionID) || isNil(constitution)) return;
+
+		if (constitution.module.data.users[OWNER_INDEX] !== client.uid) return;		// only the owner can delete a constitution
+
+		const doc = firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.module.data.id}`);
+		firestore.recursiveDelete(doc);
 	}
 
 	private async join(message: Message<unknown>, client: Client): Promise<void> {
