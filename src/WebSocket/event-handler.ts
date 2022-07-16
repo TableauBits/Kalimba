@@ -9,9 +9,6 @@ import { inviteModule } from "./modules/invite";
 import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
 import { createMessage } from "./utility";
-import axios from "axios";
-import { PORT, SELF_URL } from "../constants";
-import { KEEP_ALIVE_PATH } from "../REST/controllers/keep-alive/keep-alive";
 
 // Telemetry HAS to be first!
 const modules: Module[] = [telemetry, userModule, constitutionModule, inviteModule];
@@ -110,12 +107,6 @@ function handleEvents(event: WebSocket.MessageEvent): void {
 		return;
 	}
 	if (message.event.startsWith("CLIENT")) {
-		if (message.event === EventType.CLIENT_ping) {
-			const url = `${SELF_URL}:${PORT}/${KEEP_ALIVE_PATH}`;
-			console.log(url);
-			axios.get(url)
-				.then((res) => console.log(res.data));
-		}
 		return;
 	}
 
