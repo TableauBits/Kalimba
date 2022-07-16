@@ -8,5 +8,3 @@ if (encryptedAdminSAK == undefined) {
 export const ENCRYPTED_ADMIN_SAK = encryptedAdminSAK;
 
 export const DASHBOARD_PASSWORD = process.env["DASHBOARD_PASSWORD"] || "";
-export const SELF_URL = process.env["SELF_URL"] || "http://localhost";
-export const PORT = process.env["PORT"] || 3000;
