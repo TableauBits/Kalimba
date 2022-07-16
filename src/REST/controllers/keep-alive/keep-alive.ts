@@ -71,7 +71,7 @@ function* lyrics() {
 const lyricGenerator = lyrics();
 
 keepAliveController.get("/", async (_, res) => {
-	res.send(lyricGenerator.next().value);
+	res.send(JSON.stringify(lyricGenerator.next().value));
 });
 
 export { keepAliveController };
