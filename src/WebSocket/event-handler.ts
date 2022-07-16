@@ -5,14 +5,14 @@ import { Client } from "../Types/client";
 import { auth } from "./firebase";
 import { Module } from "./module";
 import { constitutionModule } from "./modules/constitution-manager";
-import { historyModule } from "./modules/history";
+import { pantheonModule } from "./modules/pantheon";
 import { inviteModule } from "./modules/invite";
 import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
 import { createMessage } from "./utility";
 
 // Telemetry HAS to be first!
-const modules: Module[] = [telemetry, userModule, constitutionModule, inviteModule, historyModule];
+const modules: Module[] = [telemetry, userModule, constitutionModule, inviteModule, pantheonModule];
 const clients: Client[] = [];
 
 function decodeMessage<T>(eventData: string): Message<T> | undefined {

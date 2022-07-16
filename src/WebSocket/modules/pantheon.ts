@@ -1,30 +1,30 @@
-import { createMessage, EventType, History, HistoryResUpdate, Message } from "chelys";
+import { createMessage, EventType, PantheonSong, PantheonResUpdate, Message } from "chelys";
 import { Client } from "../../Types/client";
 import { firestore } from "../firebase";
 import { Module } from "../module";
 import { telemetry } from "./telemetry";
 
-export class HistoryModule extends Module {
-	public prefix = "HISTORY";
+export class PantheonModule extends Module {
+	public prefix = "PANTHEON";
 
 	private path = "pantheon";
-	private pantheon: Map<string, History> = new Map();
+	private pantheon: Map<string, PantheonSong> = new Map();
 	private listeners: Set<Client> = new Set();
 	
 	constructor() {
 		super();
 
-		this.moduleMap.set(EventType.HISTORY_get_all, this.getAll);
+		this.moduleMap.set(EventType.PANTHEON_get_all, this.getAll);
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			collection.docChanges().forEach((change) => {
-				const data = change.doc.data() as History;
+				const data = change.doc.data() as PantheonSong;
 				switch (change.type) {
 					case "added":
 						this.pantheon.set(data.id, data);
 						telemetry.read(false);
 						this.listeners.forEach((listener) => {
-							listener.socket.send(createMessage<HistoryResUpdate>(EventType.HISTORY_update, {history: data}));
+							listener.socket.send(createMessage<PantheonResUpdate>(EventType.PANTHEON_update, {pantheon: data}));
 						});
 					// TODO : case modified / deleted ?
 				}
@@ -48,12 +48,12 @@ export class HistoryModule extends Module {
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		this.listeners.add(client);
-		this.pantheon.forEach((history) => {
-			const updateMessage = createMessage<HistoryResUpdate>(EventType.HISTORY_update, {history});
+		this.pantheon.forEach((pantheon) => {
+			const updateMessage = createMessage<PantheonResUpdate>(EventType.PANTHEON_update, {pantheon});
 			client.socket.send(updateMessage);
 			telemetry.read();
 		});
 	}
 }
 
-export const historyModule = new HistoryModule();
+export const pantheonModule = new PantheonModule();
