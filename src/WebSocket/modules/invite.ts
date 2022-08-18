@@ -1,7 +1,7 @@
-import { createMessage, EventType, extractMessageData, Invite, InvReqDelete, InvResUpdate, Message, Role } from "chelys";
+import { createMessage, EventType, extractMessageData, Invite, InvReqCheck, InvReqDelete, InvResCheck, InvResUpdate, Message, Role } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { createID, firestore } from "../firebase";
+import { auth, createID, firestore } from "../firebase";
 import { Module } from "../module";
 import { telemetry } from "./telemetry";
 import { userModule } from "./user";
@@ -14,13 +14,15 @@ class InviteModule extends Module {
 	private invites: Map<string, Invite> = new Map();
 
 	private listeners: Set<Client> = new Set();
-	
+
 	constructor() {
 		super();
 
 		this.moduleMap.set(EventType.INVITE_new, this.new);
 		this.moduleMap.set(EventType.INVITE_delete, this.delete);
 		this.moduleMap.set(EventType.INVITE_get_all, this.getAll);
+		this.moduleMap.set(EventType.INVITE_check, this.check);
+		this.moduleMap.set(EventType.INVITE_unsubscribe, this.unsubscribe);
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
@@ -30,11 +32,11 @@ class InviteModule extends Module {
 					case "added" || "modified":
 						this.invites.set(data.id, data);
 						telemetry.read(false);
-						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, {invite: data, status: "added"});
+						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: data, status: "added" });
 						break;
 					case "removed":
 						this.invites.delete(data.id);
-						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, {invite: data, status: "removed"});
+						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: data, status: "removed" });
 						break;
 				}
 				this.listeners.forEach((listener) => {
@@ -60,7 +62,7 @@ class InviteModule extends Module {
 		return !(isNil(user) || !user.data.roles.includes(Role.DEV));
 	}
 
-	public async new(_: Message<unknown>, client: Client) {
+	public async new(_: Message<unknown>, client: Client): Promise<void> {
 		if (!this.isDev(client.uid)) return;
 
 		const invite: Invite = {
@@ -73,7 +75,7 @@ class InviteModule extends Module {
 		telemetry.write(false);
 	}
 
-	public async delete(message: Message<unknown>, client: Client) {
+	public async delete(message: Message<unknown>, client: Client): Promise<void> {
 		if (!this.isDev(client.uid)) return;
 
 		const id = extractMessageData<InvReqDelete>(message).id;
@@ -81,14 +83,55 @@ class InviteModule extends Module {
 		firestore.doc(`${this.path}/${id}`).delete();
 	}
 
-	public async getAll(_: Message<unknown>, client: Client) {
+	public async getAll(_: Message<unknown>, client: Client): Promise<void> {
+		if (!this.isDev(client.uid)) return;
+
 		this.listeners.add(client);
 
 		this.invites.forEach((invite) => {
-			const updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, {invite: invite, status: "added"});
+			const updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: invite, status: "added" });
 			client.socket.send(updateMessage);
 			telemetry.read();
 		});
+	}
+
+	public async check(message: Message<unknown>, client: Client): Promise<void> {
+		const request = extractMessageData<InvReqCheck>(message);
+		const invite = this.invites.get(request.id);
+		telemetry.read();
+
+		if (isNil(invite)) {
+			const response = createMessage<InvResCheck>(EventType.INVITE_check, { status: { success: false, status: "The invite doesn't exist !" } });
+			client.socket.send(response);
+			return;
+		}
+
+		const newAccount = {
+			uid: request.account.uid,
+			email: request.account.email,
+			displayName: request.account.displayName,
+			photoURL: request.account.photoURL
+		};
+
+		try {
+			await auth.createUser(newAccount);
+		} catch (error) {
+			console.log(`Failed to create new firebase user: ${error}`);
+			return;
+		}
+		try {
+			await userModule.createUser(newAccount);
+		} catch (error) {
+			console.log(`Failed to create new MATBay! user: ${error}`);
+			await auth.deleteUser(newAccount.uid);
+			return;
+		}
+
+		this.invites.delete(invite.id);
+	}
+
+	public async unsubscribe(_: Message<unknown>, client: Client): Promise<void> {
+		this.listeners.delete(client);
 	}
 
 	public onClose(client: Client): void {
