@@ -1,7 +1,7 @@
-import { createMessage, EventType, extractMessageData, Invite, InvReqDelete, InvResCheck, InvResUpdate, Message, Role } from "chelys";
+import { createMessage, EventType, extractMessageData, Invite, InvReqDelete, InvResUpdate, Message, Role } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { auth, createID, firestore } from "../firebase";
+import { createID, firestore } from "../firebase";
 import { Module } from "../module";
 import { telemetry } from "./telemetry";
 import { userModule } from "./user";
