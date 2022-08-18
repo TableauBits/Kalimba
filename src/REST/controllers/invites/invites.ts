@@ -61,16 +61,9 @@ InvitesController.post("/:id", async (req, res) => {
 	inviteModule.deleteInvite(inviteID);
 
 	try {
-		await auth.createUser(newAccount);
-	} catch (error) {
-		errorMessage.response.status = `Failed to create matbay account: ${error}`;
-		res.send(errorMessage);
-		return;
-	}
-
-	try {
 		await userModule.createUser(newAccount);
 	} catch (error) {
+		console.log("error");
 		await auth.deleteUser(newAccount.uid);
 		errorMessage.response.status = `Failed to create matbay account: ${error}`;
 		res.send(errorMessage);
