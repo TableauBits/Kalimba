@@ -89,7 +89,7 @@ export class FavoriteModule extends SubModule<Constitution> {
 		const favorites = this.favorites.get(client.uid);
 		if (isNil(favorites)) return;
 		if (favorites.favs.length >= FAVORITES_MAX_LENGTH) return;
-		
+
 		const newFav = extractMessageData<CstFavReqAdd>(message);
 		firestore.collection(this.path).doc(client.uid).update({ favs: firestoreTypes.FieldValue.arrayUnion(newFav.songId) });
 	}
@@ -113,6 +113,5 @@ export class FavoriteModule extends SubModule<Constitution> {
 
 	private async unsubscribe(_: Message<unknown>, client: Client): Promise<void> {
 		this.listeners.delete(client);
-		return;
 	}
 }
