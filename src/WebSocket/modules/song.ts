@@ -5,8 +5,8 @@ import { Client } from "../../Types/client";
 import { SubModule } from "../module";
 import { telemetry } from "./telemetry";
 import { cleanupString, FS_CONSTITUTIONS_PATH } from "../utility";
-import { VoteData } from "../../Types/vote-data";
 import { GradeVoteModule } from "./vote-modules/grade";
+import { VoteModule } from "./vote-modules/vote";
 
 const SONG_NAME_LENGTH = 100;	// TODO
 const SONG_AUTHOR_LENGTH = 100;
@@ -19,7 +19,7 @@ export class SongModule extends SubModule<Constitution> {
 
 	private listeners: Set<Client> = new Set();
 
-	private voteSubmodule: SubModule<VoteData>;
+	private voteSubmodule: VoteModule;
 
 	constructor(private constitution: Constitution) {
 		super();
@@ -115,7 +115,7 @@ export class SongModule extends SubModule<Constitution> {
 			author: cleanupString(songData.author, SONG_AUTHOR_LENGTH),
 			platform: songData.platform ?? SongPlatform.YOUTUBE,
 			title: cleanupString(songData.title, SONG_NAME_LENGTH),
-			url: songData.url,
+			url: songData.url ?? "https://www.youtube.com/watch?v=MYZ67-Sh7kM",
 			user: client.uid
 		};
 
@@ -134,6 +134,8 @@ export class SongModule extends SubModule<Constitution> {
 		const song = this.songs.get(requestData.songId);
 		if (isNil(song)) return;
 		if (song.user !== client.uid) return;
+
+		this.voteSubmodule.deleteSong(song.id);
 
 		firestore.collection(this.path).doc(song.id.toString()).delete();
 	}

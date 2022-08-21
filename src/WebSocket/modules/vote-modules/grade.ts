@@ -3,11 +3,11 @@ import { inRange, isNil, toString } from "lodash";
 import { Client } from "../../../Types/client";
 import { VoteData } from "../../../Types/vote-data";
 import { firestore, firestoreTypes } from "../../firebase";
-import { SubModule } from "../../module";
 import { FS_CONSTITUTIONS_PATH } from "../../utility";
 import { telemetry } from "../telemetry";
+import { VoteModule } from "./vote";
 
-export class GradeVoteModule extends SubModule<VoteData> {
+export class GradeVoteModule extends VoteModule {
 	prefix = "GRADE";
 
 	private summary: KGradeSummary = { voteCount: 0, userCount: {} };
@@ -33,6 +33,42 @@ export class GradeVoteModule extends SubModule<VoteData> {
 				telemetry.read();
 			});
 		});
+
+		firestore.collection(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes`)
+			.where(firestoreTypes.FieldPath.documentId(), "!=", "summary")
+			.onSnapshot((query) => {
+				for (let change of query.docChanges()) {
+					const changeData = change.doc.data() as KGradeUserData;
+					const updateMessage = createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: change.type, userData: changeData })
+					switch (change.type) {
+						case "added":
+							this.userDatas.set(changeData.uid, changeData);
+							this.userDataListeners.set(changeData.uid, new Set());
+							telemetry.read(false);
+							break;
+
+						case "modified": {
+							const oldData = this.userDatas.get(changeData.uid);
+							if (isNil(oldData)) return;
+							this.userDatas.set(changeData.uid, changeData);
+							telemetry.read(false);
+							break;
+						}
+
+						case "removed":
+							this.userDatas.delete(changeData.uid);
+							break;
+					}
+
+					const userListeners = this.userDataListeners.get(changeData.uid);
+					if (!isNil(userListeners)) {
+						userListeners.forEach((listener) => {
+							listener.socket.send(updateMessage);
+							telemetry.read();
+						})
+					}
+				}
+			});
 	}
 
 	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
@@ -54,6 +90,21 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		this.data = data;
 	}
 
+	public deleteSong(songID: number): void {
+		for (let [uid, votes] of this.userDatas) {
+			if (!isNil(votes.values[toString(songID)])) {
+				// Update global summary
+				this.updateSummary(uid, songID, "remove");
+
+				// Remove entry from user votemap
+				firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${uid}`)
+					.update({ [`values.${songID}`]: firestoreTypes.FieldValue.delete() });
+				telemetry.write(false);
+			}
+		}
+		console.log("All done")
+	}
+
 	private async getSummary(_: Message<unknown>, client: Client): Promise<void> {
 		this.summaryListeners.add(client);
 
@@ -61,21 +112,39 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		telemetry.read();
 	}
 
-	private updateSummary(client: Client, song: Song) {
+	private updateSummary(clientUID: string, songID: number, action: "add" | "remove") {
 		// Add the user if he is not in the summary
-		if (isNil(this.summary.userCount[client.uid])) {
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: 1 });
+		if (isNil(this.summary.userCount[clientUID])) {
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`)
+				.update({ [`userCount.${clientUID}`]: 1 });
+			telemetry.write(false);
 		}
 
-		// If create a new vote, update the summary value
-		if (isNil(this.userDatas.get(client.uid)?.values[toString(song.id)])) {
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({voteCount: firestoreTypes.FieldValue.increment(1)});
+		const existsInVotemap = !isNil(this.userDatas.get(clientUID)?.values[toString(songID)]);
 
-			const userCountValue = this.summary.userCount[client.uid];
+		if (action === "add" && !existsInVotemap) {
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`)
+				.update({ voteCount: firestoreTypes.FieldValue.increment(1) });
+			telemetry.write(false);
+
+			const userCountValue = this.summary.userCount[clientUID];
 			const newValue = userCountValue ? userCountValue + 1 : 1;
-			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`).update({ [`userCount.${client.uid}`]: newValue });
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`)
+				.update({ [`userCount.${clientUID}`]: newValue });
+			telemetry.write(false);
 		}
 
+		if (action === "remove" && existsInVotemap) {
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`)
+				.update({ voteCount: firestoreTypes.FieldValue.increment(-1) }); // Why is there no "decrement" firestore, do you hate me that much ?
+			telemetry.write(false);
+
+			const userCountValue = this.summary.userCount[clientUID];
+			const newValue = userCountValue ? userCountValue - 1 : 0;
+			firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/summary`)
+				.update({ [`userCount.${clientUID}`]: newValue });
+			telemetry.write(false);
+		}
 	}
 
 	private async edit(message: Message<unknown>, client: Client): Promise<void> {
@@ -86,59 +155,31 @@ export class GradeVoteModule extends SubModule<VoteData> {
 		if (song.user === client.uid) return;		// An user can't vote for his own songs
 		if (!inRange(vote.grade, 1, 11)) return;
 
-		this.updateSummary(client, song);
+		this.updateSummary(client.uid, song.id, "add");
 
-		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${client.uid}`).update({ [`values.${vote.songId}`]: vote.grade });
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${client.uid}`)
+			.update({ [`values.${vote.songId}`]: vote.grade });
 		telemetry.write(false);
 	}
 
-	private fetchUserData(uid: string): void {
-		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes/${uid}`).onSnapshot((document) => {
-			const docData = document.data() as KGradeUserData;
-			this.userDatas.set(uid, docData);
-			const listeners = this.userDataListeners.get(uid);
-			if (!isNil(listeners)) {
-				listeners.forEach((listener) => {
-					listener.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "modified", userData: docData }));
-				});
-				telemetry.read();
-			}
-			telemetry.read(false);
-		});
-	}
-
 	private async getUser(_: Message<unknown>, client: Client): Promise<void> {
-		if (!this.userDatas.has(client.uid)) {
-			this.userDataListeners.set(client.uid, new Set<Client>([client]));
-			this.fetchUserData(client.uid);
-		} else {
-			this.userDataListeners.get(client.uid)?.add(client);
-			const userData = this.userDatas.get(client.uid);
-			if (isNil(userData)) return;
-			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
-		}
+		this.userDataListeners.get(client.uid)?.add(client);
+		const userData = this.userDatas.get(client.uid);
+		if (isNil(userData)) return;
+		client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		if (canModifyVotes(this.data.constitution)) return;
 
-		for (const user of this.data.constitution.users) {
-			const userData = this.userDatas.get(user);
-			if (isNil(userData)) {
-				this.userDataListeners.set(user, new Set<Client>([client]));
-				this.fetchUserData(user);
-			} else {
-				this.userDataListeners.get(user)?.add(client);
-				client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
-			}
+		for (let [user, data] of this.userDatas) {
+			this.userDataListeners.get(user)?.add(client);
+
+			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: data }));
 		}
 	}
 
-	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
-		const requestData = extractMessageData<GradeReqUnsubscribe>(message);
-		if (isNil(requestData)) return;
-		if (requestData.cstId !== this.data.constitution.id) return;
-
+	private async unsubscribe(_: Message<unknown>, client: Client): Promise<void> {
 		this.userDataListeners.forEach((userDataListener) => {
 			if (userDataListener.has(client)) userDataListener.delete(client);
 		});
