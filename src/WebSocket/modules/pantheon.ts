@@ -15,6 +15,7 @@ export class PantheonModule extends Module {
 		super();
 
 		this.moduleMap.set(EventType.PANTHEON_get_all, this.getAll);
+		this.moduleMap.set(EventType.PANTHEON_unsubscribe, this.unsubscribe);
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			collection.docChanges().forEach((change) => {
@@ -53,6 +54,11 @@ export class PantheonModule extends Module {
 			client.socket.send(updateMessage);
 			telemetry.read();
 		});
+	}
+
+	private async unsubscribe(_: Message<unknown>, client: Client): Promise<void> {
+		this.listeners.delete(client);
+		return;
 	}
 }
 
