@@ -1,0 +1,11 @@
+.github/
+.vscode/
+node_modules/
+tests/
+src/
+
+.dockerignore
+.env.template
+.gitignore
+Dockerfile
+Procfile

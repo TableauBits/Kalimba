@@ -1,9 +1,12 @@
+# example run command:
+# docker run -p 3000:3000 [--rm --it] <name|ID>
+
 FROM node:alpine
 
 WORKDIR /kalimba
-copy . /kalimba
-RUN npm install
+COPY . /kalimba
+RUN npm install --omit=dev
 
 EXPOSE 3000
 
-ENTRYPOINT ["npm", "start"]
+ENTRYPOINT ["node", "./dist/index.js"]
