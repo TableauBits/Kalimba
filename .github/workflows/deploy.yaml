@@ -13,5 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - run: printf "MATBAY_SERVICE_ACCOUNT_KEY=${{ secrets.MATBAY_SERVICE_ACCOUNT_KEY }}\nDASHBOARD_PASSWORD=${{ secrets.DASHBOARD_PASSWORD }}" >> .env 
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
