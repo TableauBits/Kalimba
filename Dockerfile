@@ -5,7 +5,6 @@ FROM node:alpine
 
 WORKDIR /kalimba
 COPY . /kalimba
-RUN npm install --omit=dev
 
 EXPOSE 3000
 
