@@ -19,6 +19,33 @@
         Date et heure: <%= new Date().toString() %>
     </p>
     <p>
+        Mémoire utilisée:
+    <table>
+        <tr>
+            <th>type</th>
+            <th>value</th>
+        </tr>
+        <tr>
+            <th>rss</th>
+            <th>
+                <%= process.memoryUsage().rss / 1024 / 1024 %> MB
+            </th>
+        </tr>
+        <tr>
+            <th>heap total</th>
+            <th>
+                <%= process.memoryUsage().heapTotal / 1024 / 1024 %> MB
+            </th>
+        </tr>
+        <tr>
+            <th>heap used</th>
+            <th>
+                <%= process.memoryUsage().heapUsed / 1024 / 1024 %> MB
+            </th>
+        </tr>
+    </table>
+    </p>
+    <p>
         Niveau d'authentification du dashboard: <%= isAdmin ? "admin" : "public" %>
     </p>
     <div style="width: 50%; float: left;">
@@ -40,5 +67,5 @@
             <input type="password" id="password" />
             <button
                 onclick="window.location.href = window.location.pathname + '?pw=' + document.getElementById('password').value;">Valider</button>
-        <% } %>
+            <% } %>
 </body>

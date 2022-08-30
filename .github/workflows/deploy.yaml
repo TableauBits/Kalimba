@@ -1,0 +1,20 @@
+name: Fly deploy
+on:
+  push:
+    branches:
+      - release
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  deploy:
+    name: deploy to Fly.IO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: printf "MATBAY_SERVICE_ACCOUNT_KEY=${{ secrets.MATBAY_SERVICE_ACCOUNT_KEY }}\nDASHBOARD_PASSWORD=${{ secrets.DASHBOARD_PASSWORD }}" >> .env 
+      - run: npm install typescript
+      - run: npm run build 
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
