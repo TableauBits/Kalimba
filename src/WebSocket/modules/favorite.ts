@@ -28,7 +28,7 @@ export class FavoriteModule extends SubModule<SongData> {
 		firestore.collection(this.path).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
 				const newFavData = change.doc.data() as UserFavorites;
-				const updateMessage = createMessage<FavResUpdate>(EventType.CST_FAV_update, { userFavorites: newFavData });
+				const updateMessage = createMessage<FavResUpdate>(EventType.CST_SONG_FAV_update, { userFavorites: newFavData });
 				switch (change.type) {
 					case "added":
 						this.favorites.set(newFavData.uid, newFavData);
@@ -73,7 +73,7 @@ export class FavoriteModule extends SubModule<SongData> {
 	public updateData(data: SongData): void {
 		if (this.constitution.state !== data.constitution.state) {
 			this.favorites.forEach((favorite) => {
-				const updateMessage = createMessage<FavResUpdate>(EventType.CST_FAV_update, { userFavorites: favorite });
+				const updateMessage = createMessage<FavResUpdate>(EventType.CST_SONG_FAV_update, { userFavorites: favorite });
 				this.listeners.forEach((listener) => {
 					if (areResultsPublic(this.constitution) || listener.uid !== favorite.uid) {
 						listener.socket.send(updateMessage);
@@ -111,7 +111,7 @@ export class FavoriteModule extends SubModule<SongData> {
 		this.listeners.add(client);
 
 		this.favorites.forEach((favorite) => {
-			const updateMessage = createMessage<FavResUpdate>(EventType.CST_FAV_update, { userFavorites: favorite });
+			const updateMessage = createMessage<FavResUpdate>(EventType.CST_SONG_FAV_update, { userFavorites: favorite });
 			if (areResultsPublic(this.constitution) || client.uid === favorite.uid) {
 				client.socket.send(updateMessage);
 				telemetry.read();

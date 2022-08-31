@@ -73,6 +73,9 @@ export class SongModule extends SubModule<Constitution> {
 		if (message.event.startsWith(`CST-${this.prefix}-${this.voteSubmodule.prefix}`)) {
 			return this.voteSubmodule.handleEvent(message, client);
 		}
+		if (message.event.startsWith(`CST-${this.prefix}-${this.favoritesSubmodule.prefix}`)) {
+			return this.favoritesSubmodule.handleEvent(message, client);
+		}
 
 		const eventCallback = this.moduleMap.get(message.event);
 		if (eventCallback === undefined) {
