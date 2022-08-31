@@ -9,18 +9,18 @@ import { userModule } from "./user";
 
 class InviteModule extends Module {
 	public prefix = "INVITE";
+	public invites: Map<string, Invite> = new Map();
 
 	private path = "invites";
-	private invites: Map<string, Invite> = new Map();
-
 	private listeners: Set<Client> = new Set();
-	
+
 	constructor() {
 		super();
 
 		this.moduleMap.set(EventType.INVITE_new, this.new);
 		this.moduleMap.set(EventType.INVITE_delete, this.delete);
 		this.moduleMap.set(EventType.INVITE_get_all, this.getAll);
+		this.moduleMap.set(EventType.INVITE_unsubscribe, this.unsubscribe);
 
 		firestore.collection(this.path).onSnapshot((collection) => {
 			for (const change of collection.docChanges()) {
@@ -30,11 +30,11 @@ class InviteModule extends Module {
 					case "added" || "modified":
 						this.invites.set(data.id, data);
 						telemetry.read(false);
-						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, {invite: data, status: "added"});
+						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: data, status: "added" });
 						break;
 					case "removed":
 						this.invites.delete(data.id);
-						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, {invite: data, status: "removed"});
+						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: data, status: "removed" });
 						break;
 				}
 				this.listeners.forEach((listener) => {
@@ -43,6 +43,10 @@ class InviteModule extends Module {
 				});
 			}
 		});
+	}
+
+	public async deleteInvite(id: string): Promise<void> {
+		firestore.doc(`${this.path}/${id}`).delete();
 	}
 
 	public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
@@ -60,7 +64,7 @@ class InviteModule extends Module {
 		return !(isNil(user) || !user.data.roles.includes(Role.DEV));
 	}
 
-	public async new(_: Message<unknown>, client: Client) {
+	public async new(_: Message<unknown>, client: Client): Promise<void> {
 		if (!this.isDev(client.uid)) return;
 
 		const invite: Invite = {
@@ -73,22 +77,28 @@ class InviteModule extends Module {
 		telemetry.write(false);
 	}
 
-	public async delete(message: Message<unknown>, client: Client) {
+	public async delete(message: Message<unknown>, client: Client): Promise<void> {
 		if (!this.isDev(client.uid)) return;
 
 		const id = extractMessageData<InvReqDelete>(message).id;
 
-		firestore.doc(`${this.path}/${id}`).delete();
+		await this.deleteInvite(id);
 	}
 
-	public async getAll(_: Message<unknown>, client: Client) {
+	public async getAll(_: Message<unknown>, client: Client): Promise<void> {
+		if (!this.isDev(client.uid)) return;
+
 		this.listeners.add(client);
 
 		this.invites.forEach((invite) => {
-			const updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, {invite: invite, status: "added"});
+			const updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: invite, status: "added" });
 			client.socket.send(updateMessage);
 			telemetry.read();
 		});
+	}
+
+	public async unsubscribe(_: Message<unknown>, client: Client): Promise<void> {
+		this.listeners.delete(client);
 	}
 
 	public onClose(client: Client): void {

@@ -1,0 +1,10 @@
+.github/
+.vscode/
+tests/
+src/
+
+.dockerignore
+.env.template
+.gitignore
+Dockerfile
+Procfile

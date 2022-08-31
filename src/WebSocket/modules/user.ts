@@ -1,7 +1,7 @@
-import { EventType, extractMessageData, Message, Role, User, UsrReqEditProfile, UsrReqEditRoles, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
+import { EventType, extractMessageData, Message, NewAccount, Role, User, UsrReqEditProfile, UsrReqEditRoles, UsrReqGet, UsrReqUnsubscribe, UsrResUpdate } from "chelys";
 import { isNil } from "lodash";
 import { Client } from "../../Types/client";
-import { createID, firestore } from "../firebase";
+import { firestore } from "../firebase";
 import { Module } from "../module";
 import { cleanupString, createMessage } from "../utility";
 import { telemetry } from "./telemetry";
@@ -63,6 +63,20 @@ class UserModule extends Module {
 				}
 			}
 		});
+	}
+
+	public async createUser(userData: NewAccount): Promise<void> {
+		const user: User = {
+			uid: userData.uid,
+			email: userData.email,
+			displayName: cleanupString(userData.displayName, DISPLAY_NAME_MAX_LENGTH),
+			photoURL: userData.photoURL,
+			roles: [Role.MEMBER],
+			description: "",
+		};
+
+		await firestore.collection(FS_USERS_PATH).doc(userData.uid).create(user);
+		telemetry.write(false);
 	}
 
 	private async get(message: Message<unknown>, client: Client): Promise<void> {
@@ -131,17 +145,13 @@ class UserModule extends Module {
 			return;
 		}
 
-		const user: User = {
-			uid: createID(),
+		const newAccount: NewAccount = {
+			uid: requestData.uid,
 			email: requestData.email,
-			displayName: cleanupString(requestData.displayName, DISPLAY_NAME_MAX_LENGTH),
-			photoURL: requestData.photoURL,
-			roles: [Role.MEMBER],
-			description: cleanupString(requestData.description, DESCRIPTION_MAX_LENGTH),
+			displayName: requestData.displayName,
+			photoURL: requestData.photoURL
 		};
-
-		firestore.collection(FS_USERS_PATH).doc(requestData.uid).create(user);
-		telemetry.write(false);
+		this.createUser(newAccount);
 	}
 
 	private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {

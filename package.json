@@ -4,6 +4,7 @@
 	"description": "MATBay! revamped back-end",
 	"main": "./dist/index.js",
 	"scripts": {
+		"build": "tsc && npx copyfiles -E -f src/REST/controllers/dashboard/*.ejs dist/REST/controllers/dashboard/",
 		"start": "tsc && npx copyfiles -E -f src/REST/controllers/dashboard/*.ejs dist/REST/controllers/dashboard/ && node ./dist/index.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
@@ -26,7 +27,7 @@
 		"ejs": "^3.1.6",
 		"eslint": "^7.26.0",
 		"express": "^4.17.1",
-		"firebase-admin": "^9.9.0",
+		"firebase-admin": "^11.0.1",
 		"lodash": "^4.17.21",
 		"typescript": "^4.2.4",
 		"utf-8-validate": "^5.0.5",
