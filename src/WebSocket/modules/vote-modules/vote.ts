@@ -1,6 +1,6 @@
-import { VoteData } from "../../../Types/vote-data";
+import { SongData } from "../../../Types/song-data";
 import { SubModule } from "../../module";
 
-export abstract class VoteModule extends SubModule<VoteData> {
+export abstract class VoteModule extends SubModule<SongData> {
     public abstract deleteSong(songID: number): void;
 }

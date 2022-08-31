@@ -1,7 +1,7 @@
 import { canModifyVotes, createMessage, EventType, extractMessageData, GradeReqEdit, GradeReqUnsubscribe, GradeResSummaryUpdate, Message, KGradeSummary, KGradeUserData, GradeResUserDataUpdate, Song } from "chelys";
 import { inRange, isNil, toString } from "lodash";
 import { Client } from "../../../Types/client";
-import { VoteData } from "../../../Types/vote-data";
+import { SongData } from "../../../Types/song-data";
 import { firestore, firestoreTypes } from "../../firebase";
 import { FS_CONSTITUTIONS_PATH } from "../../utility";
 import { telemetry } from "../telemetry";
@@ -16,7 +16,7 @@ export class GradeVoteModule extends VoteModule {
 	private userDatas: Map<string, KGradeUserData> = new Map();
 	private userDataListeners: Map<string, Set<Client>> = new Map();
 
-	constructor(private data: VoteData) {
+	constructor(private data: SongData) {
 		super();
 
 		this.moduleMap.set(EventType.CST_SONG_GRADE_get_summary, this.getSummary);
@@ -86,7 +86,7 @@ export class GradeVoteModule extends VoteModule {
 		return;
 	}
 
-	public updateData(data: VoteData): void {
+	public updateData(data: SongData): void {
 		this.data = data;
 	}
 

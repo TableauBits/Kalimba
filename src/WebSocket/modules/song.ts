@@ -7,6 +7,7 @@ import { telemetry } from "./telemetry";
 import { cleanupString, FS_CONSTITUTIONS_PATH } from "../utility";
 import { GradeVoteModule } from "./vote-modules/grade";
 import { VoteModule } from "./vote-modules/vote";
+import { FavoriteModule } from "./favorite";
 
 const SONG_NAME_LENGTH = 100;	// TODO
 const SONG_AUTHOR_LENGTH = 100;
@@ -20,6 +21,7 @@ export class SongModule extends SubModule<Constitution> {
 	private listeners: Set<Client> = new Set();
 
 	private voteSubmodule: VoteModule;
+	private favoritesSubmodule: FavoriteModule;
 
 	constructor(private constitution: Constitution) {
 		super();
@@ -30,6 +32,7 @@ export class SongModule extends SubModule<Constitution> {
 
 		this.path = `${FS_CONSTITUTIONS_PATH}/${constitution.id}/songs`;
 
+		this.favoritesSubmodule = new FavoriteModule(this.constitution, this.songs);
 		switch (constitution.type) {
 			case ConstitutionType.GRADE:
 			default: {
@@ -88,6 +91,7 @@ export class SongModule extends SubModule<Constitution> {
 	public updateData(constitution: Constitution): void {
 		this.constitution = constitution;
 		this.voteSubmodule.updateData({ constitution: constitution, songs: this.songs });
+		this.favoritesSubmodule.updateData({ constitution: constitution, songs: this.songs });
 	}
 
 	private nextSongId(): number {
@@ -136,6 +140,7 @@ export class SongModule extends SubModule<Constitution> {
 		if (song.user !== client.uid) return;
 
 		this.voteSubmodule.deleteSong(song.id);
+		this.favoritesSubmodule.deleteFavorites(song.id);
 
 		firestore.collection(this.path).doc(song.id.toString()).delete();
 	}
