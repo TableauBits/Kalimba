@@ -58,7 +58,7 @@ export class PantheonModule extends Module {
 
 	private async add(message: Message<unknown>, client: Client): Promise<void> {
 		// Only admin can update the pantheon
-		if (this.isAdmin(client.uid)) return;
+		if (!this.isAdmin(client.uid)) return;
 		
 		const data = extractMessageData<PantheonReqAdd>(message).pantheon;
 
