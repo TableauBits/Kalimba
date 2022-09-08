@@ -102,7 +102,6 @@ export class GradeVoteModule extends VoteModule {
 				telemetry.write(false);
 			}
 		}
-		console.log("All done")
 	}
 
 	private async getSummary(_: Message<unknown>, client: Client): Promise<void> {
