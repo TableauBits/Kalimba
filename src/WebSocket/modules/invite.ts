@@ -27,10 +27,15 @@ class InviteModule extends Module {
 				const data = change.doc.data() as Invite;
 				let updateMessage: string;
 				switch (change.type) {
-					case "added" || "modified":
+					case "added":
 						this.invites.set(data.id, data);
 						telemetry.read(false);
 						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: data, status: "added" });
+						break;
+					case "modified":
+						this.invites.set(data.id, data);
+						telemetry.read(false);
+						updateMessage = createMessage<InvResUpdate>(EventType.INVITE_update, { invite: data, status: "modified" });
 						break;
 					case "removed":
 						this.invites.delete(data.id);
