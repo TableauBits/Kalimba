@@ -120,6 +120,18 @@ class ConstitutionManagerModule extends Module {
 		if (requestData.type ?? ConstitutionType.LENGTH >= ConstitutionType.LENGTH) return;
 		if (isNil(requestData.playlistLink)) return;
 
+		const startDate = new Date();
+
+		// Only keep the end date if it happen after the start date (the date of creation)
+		let endDate = requestData.endDate;
+		if (!isNil(endDate)) {
+			const date = new Date(endDate);
+			if (date < startDate)
+				endDate = undefined;
+			else 
+				endDate = date.toISOString();
+		}
+
 		const constitution: Constitution = {
 			id: createID(),
 			season: requestData.season ?? 0,
@@ -133,8 +145,8 @@ class ConstitutionManagerModule extends Module {
 			users: [client.uid],
 			maxUserCount: clamp(requestData.maxUserCount ?? 1, 1, 10),
 			numberOfSongsPerUser: clamp(requestData.numberOfSongsPerUser ?? 1, 1, 25),
-			startDate: new Date().toISOString(),
-			endDate: requestData.endDate
+			startDate: startDate.toISOString(),
+			endDate: endDate,
 		};
 
 		this.pendingListens.set(constitution.id, client);

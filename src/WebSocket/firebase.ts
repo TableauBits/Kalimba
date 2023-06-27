@@ -5,11 +5,13 @@ const adminSAK = JSON.parse(Buffer.from(ENCRYPTED_ADMIN_SAK, "base64").toString(
 
 admin.initializeApp({
 	credential: admin.credential.cert(adminSAK),
-	databaseURL: "https://matbactivity.firebaseio.com"
+	databaseURL: "https://matbactivity.firebaseio.com",
 });
 
 export const auth = admin.auth();
 export const firestore = admin.firestore();
+
+firestore.settings({ ignoreUndefinedProperties: true });
 
 export const authTypes = admin.auth;
 export const firestoreTypes = admin.firestore;
