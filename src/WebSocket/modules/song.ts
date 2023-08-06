@@ -122,9 +122,9 @@ export class SongModule extends SubModule<Constitution> {
 			author: cleanupString(songData.author, SONG_AUTHOR_LENGTH),
 			platform: songData.platform ?? SongPlatform.YOUTUBE,
 			title: cleanupString(songData.title, SONG_NAME_LENGTH),
-			url: songData.url ?? "https://www.youtube.com/watch?v=MYZ67-Sh7kM",
+			url: songData.url ?? "https://www.youtube.com/watch?v=a4Q03pJJCIA",
 			user: client.uid,
-			
+
 			// optionnal fields
 			addedDate: songData.addedDate,
 			album: songData.album,
