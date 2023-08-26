@@ -122,8 +122,16 @@ export class SongModule extends SubModule<Constitution> {
 			author: cleanupString(songData.author, SONG_AUTHOR_LENGTH),
 			platform: songData.platform ?? SongPlatform.YOUTUBE,
 			title: cleanupString(songData.title, SONG_NAME_LENGTH),
-			url: songData.url ?? "https://www.youtube.com/watch?v=MYZ67-Sh7kM",
-			user: client.uid
+			url: songData.url ?? "https://www.youtube.com/watch?v=a4Q03pJJCIA",
+			user: client.uid,
+
+			// optionnal fields
+			addedDate: songData.addedDate,
+			album: songData.album,
+			altTitles: songData.altTitles,
+			genres: songData.genres,
+			releaseYear: songData.releaseYear,
+			languages: songData.languages
 		};
 
 		firestore.collection(this.path).doc(song.id.toString()).create(song);
