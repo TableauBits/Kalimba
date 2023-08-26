@@ -2,7 +2,7 @@ import { areResultsPublic, canModifyVotes, Constitution, createMessage, EventTyp
 import { firestore, firestoreTypes } from "../firebase";
 import { Client } from "../../Types/client";
 import { SubModule } from "../module";
-import { FS_CONSTITUTIONS_PATH } from "../utility";
+import { FS_CONSTITUTIONS_PATH, removeFromArray } from "../utility";
 import { telemetry } from "./telemetry";
 import { isNil } from "lodash";
 import { SongData } from "../../Types/song-data";
