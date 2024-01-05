@@ -7,14 +7,17 @@ import { Server } from "ws";
 import { createEndpoints } from "./REST/endpoint-creation";
 import { setupWS } from "./WebSocket/event-handler";
 
+const isProd = process.env["ENVIRONMENT"] === "PRODUCTION";
+
 // create HTTP server
-const port = process.env["PORT"] || 3000;
+const port = parseInt(process.env["PORT"] || "3000");
+const listenIP = isProd ? "0.0.0.0" : "localhost";
 const server = createEndpoints(
 	express()
 		.use(cors())
 		.use(express.json())
 )
-	.listen(port, () => console.log(`server listening on ${port}`));
+	.listen(port, listenIP, () => console.log(`server listening on ${port}`));
 
 // create WS server
 const wsServer = new Server({ server });
