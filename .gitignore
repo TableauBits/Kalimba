@@ -119,3 +119,6 @@ dist
 tests/manual-testing/tine/debug
 tests/manual-testing/tine/target
 tests/manual-testing/tine/Cargo.lock
+
+# bun files
+bun.lockb
