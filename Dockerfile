@@ -6,6 +6,5 @@ FROM node:alpine
 WORKDIR /kalimba
 COPY . /kalimba
 
+CMD ["node", "./dist/index.js"]
 EXPOSE 3000
-
-ENTRYPOINT ["node", "./dist/index.js"]
