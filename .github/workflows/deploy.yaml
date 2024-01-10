@@ -12,8 +12,7 @@ jobs:
     name: deploy to Fly.IO
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: printf "MATBAY_SERVICE_ACCOUNT_KEY=${{ secrets.MATBAY_SERVICE_ACCOUNT_KEY }}\nDASHBOARD_PASSWORD=${{ secrets.DASHBOARD_PASSWORD }}\nENVIRONMENT=PRODUCTION" >> .env 
+      - uses: actions/checkout@v3
       - run: npm install typescript
       - run: npm run build 
       - uses: superfly/flyctl-actions/setup-flyctl@master
