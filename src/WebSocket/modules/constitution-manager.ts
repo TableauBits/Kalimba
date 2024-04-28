@@ -147,6 +147,7 @@ class ConstitutionManagerModule extends Module {
 			numberOfSongsPerUser: clamp(requestData.numberOfSongsPerUser ?? 1, 1, 25),
 			startDate: startDate.toISOString(),
 			endDate: endDate,
+			maxGrade: requestData.maxGrade ?? 10,
 		};
 
 		this.pendingListens.set(constitution.id, client);
