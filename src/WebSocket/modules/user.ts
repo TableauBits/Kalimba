@@ -111,6 +111,7 @@ class UserModule extends Module {
 			displayName: cleanupString(requestData.displayName ?? localUser.data.displayName, DISPLAY_NAME_MAX_LENGTH),
 			photoURL: requestData.photoURL ?? localUser.data.photoURL,
 			description: cleanupString(requestData.description ?? localUser.data.description, DESCRIPTION_MAX_LENGTH),
+			discordId: requestData.discordId,
 		};
 
 		firestore.collection(FS_USERS_PATH).doc(client.uid).update(updateData);
