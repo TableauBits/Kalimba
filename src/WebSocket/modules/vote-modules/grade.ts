@@ -37,9 +37,9 @@ export class GradeVoteModule extends VoteModule {
 		firestore.collection(`${FS_CONSTITUTIONS_PATH}/${this.data.constitution.id}/votes`)
 			.where(firestoreTypes.FieldPath.documentId(), "!=", "summary")
 			.onSnapshot((query) => {
-				for (let change of query.docChanges()) {
+				for (const change of query.docChanges()) {
 					const changeData = change.doc.data() as KGradeUserData;
-					const updateMessage = createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: change.type, userData: changeData })
+					const updateMessage = createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: change.type, userData: changeData });
 					switch (change.type) {
 						case "added":
 							this.userDatas.set(changeData.uid, changeData);
@@ -65,7 +65,7 @@ export class GradeVoteModule extends VoteModule {
 						userListeners.forEach((listener) => {
 							listener.socket.send(updateMessage);
 							telemetry.read();
-						})
+						});
 					}
 				}
 			});
@@ -91,7 +91,7 @@ export class GradeVoteModule extends VoteModule {
 	}
 
 	public deleteSong(songID: number): void {
-		for (let [uid, votes] of this.userDatas) {
+		for (const [uid, votes] of this.userDatas) {
 			if (!isNil(votes.values[toString(songID)])) {
 				// Update global summary
 				this.updateSummary(uid, songID, "remove");
@@ -152,7 +152,8 @@ export class GradeVoteModule extends VoteModule {
 		const song = this.data.songs.get(vote.songId);
 		if (isNil(song)) return;
 		if (song.user === client.uid) return;		// An user can't vote for his own songs
-		if (!inRange(vote.grade, 1, 11)) return;
+		const maxGrade = this.data.constitution.maxGrade ?? 10;
+		if (!inRange(vote.grade, 1, maxGrade+1)) return;
 
 		this.updateSummary(client.uid, song.id, "add");
 
@@ -171,7 +172,7 @@ export class GradeVoteModule extends VoteModule {
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
 		if (canModifyVotes(this.data.constitution)) return;
 
-		for (let [user, data] of this.userDatas) {
+		for (const [user, data] of this.userDatas) {
 			this.userDataListeners.get(user)?.add(client);
 
 			client.socket.send(createMessage<GradeResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: data }));
