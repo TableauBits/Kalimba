@@ -131,7 +131,8 @@ export class SongModule extends SubModule<Constitution> {
 			altTitles: songData.altTitles,
 			genres: songData.genres,
 			releaseYear: songData.releaseYear,
-			languages: songData.languages
+			languages: songData.languages,
+			featuring: songData.featuring,
 		};
 
 		firestore.collection(this.path).doc(song.id.toString()).create(song);
