@@ -148,6 +148,7 @@ class ConstitutionManagerModule extends Module {
 			startDate: startDate.toISOString(),
 			endDate: endDate,
 			maxGrade: requestData.maxGrade ?? 10,
+			judges: requestData.judges
 		};
 
 		this.pendingListens.set(constitution.id, client);
