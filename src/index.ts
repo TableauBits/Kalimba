@@ -13,16 +13,16 @@ const isProd = process.env["ENVIRONMENT"] === "PRODUCTION";
 const port = parseInt(process.env["PORT"] || "3000");
 const listenIP = isProd ? "0.0.0.0" : "localhost";
 const server = createEndpoints(
-    express()
-        .use(cors())
-        .use(express.json())
+	express()
+		.use(cors())
+		.use(express.json())
 )
-    .listen(port, listenIP, () => console.log(`server listening on ${listenIP}:${port}`));
+	.listen(port, listenIP, () => console.log(`server listening on ${listenIP}:${port}`));
 
 // create WS server
 const wsServer = new Server({ server });
 wsServer.on("connection", (ws) => {
-    console.log("client connected");
-    ws.on("close", () => console.log("client disconnected"));
-    setupWS(ws);
+	console.log("client connected");
+	ws.on("close", () => console.log("client disconnected"));
+	setupWS(ws);
 });

@@ -13,6 +13,33 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 </head>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    function download(content, fileName, contentType) {
+        const a = document.createElement("a");
+        const file = new Blob([content], { type: contentType });
+		a.href = URL.createObjectURL(file);
+        a.download = fileName;
+		a.click();
+    }
+    function dumpDB() {
+        let paramsString = new URL(document.location.toString()).searchParams;
+        let searchParams = new URLSearchParams(paramsString);
+        let password = searchParams.get("pw") ?? "";
+
+        let url = "dump-db?pw=" + password;
+
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                download(xmlHttp.responseText, "dump.json", "text/json");
+            } else {
+                console.error("Failed to dump DB");
+            }
+        }
+        xmlHttp.open("GET", url, true); // true for asynchronous
+        xmlHttp.send(null);
+    }
+</script>
 
 <body>
     <p>
@@ -62,6 +89,8 @@
         <div style="width: 50%; float: right;">
             <%- include("telemetry-data", {telemetry: telemetry, userMap: userMap}); %>
         </div>
+        <br>
+        <button onclick="dumpDB()">Dump Database</button>
         <% } else { %>
             Pour voir les informations administrateurs, entrez le mot de passe:
             <input type="password" id="password" />
