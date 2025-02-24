@@ -18,7 +18,15 @@ DumpDBController.get("/", async (req, res) => {
 			(await firestore.collection("matday").doc(doc.id).collection("songs").get()).docs.forEach((song) => songs[song.id] = song.data());
 
 			const votes: any = {};
-			(await firestore.collection("matday").doc(doc.id).collection("votes").get()).docs.forEach((vote) => votes[vote.id] = vote.data());
+			const userVotes: any = {};
+			(await firestore.collection("matday").doc(doc.id).collection("votes").get()).docs.forEach((vote) => {
+				if (vote.id === "summary") {
+					votes[vote.id] = vote.data();
+				} else {
+					userVotes[vote.id] = vote.data();
+				}
+			});
+			votes["userVotes"] = userVotes;
 
 			const favs: any = {};
 			(await firestore.collection("matday").doc(doc.id).collection("favs").get()).docs.forEach((fav) => favs[fav.id] = fav.data());
