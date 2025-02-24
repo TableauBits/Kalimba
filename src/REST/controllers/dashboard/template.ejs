@@ -22,13 +22,13 @@
 		a.click();
     }
     function dumpDB() {
-        let paramsString = new URL(document.location.toString()).searchParams;
-        let searchParams = new URLSearchParams(paramsString);
-        let password = searchParams.get("pw") ?? "";
+        const paramsString = new URL(document.location.toString()).searchParams;
+        const searchParams = new URLSearchParams(paramsString);
+        const password = searchParams.get("pw") ?? "";
 
-        let url = "dump-db?pw=" + password;
+        const url = "dump-db?pw=" + password;
 
-        var xmlHttp = new XMLHttpRequest();
+        const xmlHttp = new XMLHttpRequest();
         xmlHttp.onreadystatechange = function() {
             if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
                 download(xmlHttp.responseText, "dump.json", "text/json");
