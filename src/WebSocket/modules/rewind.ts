@@ -90,7 +90,7 @@ class RewindModule extends Module {
                     } break;
 
                     // ignored...
-                    case "modified": { console.log("REWIND UDPATE EVENT"); } break;
+                    case "modified": { } break;
                     case "removed": { } break;
                 }
             }
@@ -103,7 +103,6 @@ class RewindModule extends Module {
         if (isNil(requestData)) return;
         // if (client.uid !== requestData.uid) return;
 
-        console.log(this.rewinds.size);
         const userRewinds = this.rewinds.get(requestData.uid);
         if (isNil(userRewinds)) return;
 
