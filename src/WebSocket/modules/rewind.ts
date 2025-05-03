@@ -1,35 +1,15 @@
-import { createMessage, extractMessageData, Message } from "chelys";
+import { createMessage, EventType, extractMessageData, Message, RewindPerYear, RwdReqGet, RwdReqUnsubscribe, RwdResUpdate } from "chelys";
 import { Client } from "../../Types/client";
 import { Module } from "../module";
 import { isNil } from "lodash";
 import { telemetry } from "./telemetry";
 import { firestore } from "../firebase";
 
-// @TODO(Ithyx): Use Chelys instead...
-type Rewind = any;
-const EventType = {
-    REWIND_get: "RWD-get",
-    REWIND_update: "RWD-update",
-    REWIND_unsubscribe: "RWD-unsubscribe",
-}
-interface RwdReqGet {
-    uid: string,
-    year: number,
-}
-interface RwdReqUnsubscribe {
-    uid: string,
-    year: number,
-}
-interface RwdResUpdate {
-    rewindInfo: Rewind;
-}
-// ...up to here
-
 const FS_REWIND_ROOT_PATH = "rewind";
 const FS_REWIND_PER_YEAR_COLLECTION = "per_year";
 
 interface SubscriptionData {
-    data: Rewind;
+    data: RewindPerYear;
     listeners: Set<Client>;
 }
 
@@ -54,7 +34,7 @@ class RewindModule extends Module {
                             .onSnapshot((collection) => {
                                 for (const change of collection.docChanges()) {
                                     const year = parseInt(change.doc.id);
-                                    const newRewindData = change.doc.data()
+                                    const newRewindData = change.doc.data() as RewindPerYear;
 
                                     switch (change.type) {
                                         case "added": {
@@ -71,7 +51,7 @@ class RewindModule extends Module {
                                             if (isNil(yearSubscription)) continue;
 
                                             yearSubscription.data = newRewindData;
-                                            const updateMessage = createMessage<RwdResUpdate>(EventType.REWIND_update, { rewindInfo: newRewindData });
+                                            const updateMessage = createMessage<RwdResUpdate>(EventType.REWIND_update, { year, rewind: newRewindData });
                                             yearSubscription.listeners.forEach((listener) => {
                                                 listener.socket.send(updateMessage);
                                                 telemetry.read();
@@ -106,12 +86,11 @@ class RewindModule extends Module {
         const userRewinds = this.rewinds.get(requestData.uid);
         if (isNil(userRewinds)) return;
 
-        const rewind = userRewinds.get(requestData.year);
-        if (isNil(rewind)) return;
-
-        rewind.listeners.add(client);
-        client.socket.send(createMessage<RwdResUpdate>(EventType.REWIND_update, { rewindInfo: rewind.data }));
-        telemetry.read();
+        userRewinds.forEach((rewind, year) => {
+            rewind.listeners.add(client);
+            client.socket.send(createMessage<RwdResUpdate>(EventType.REWIND_update, { year, rewind: rewind.data }));
+            telemetry.read();
+        });
     }
 
     private async unsubscribe(message: Message<unknown>, client: Client): Promise<void> {
@@ -122,10 +101,9 @@ class RewindModule extends Module {
         const userRewinds = this.rewinds.get(requestData.uid);
         if (isNil(userRewinds)) return;
 
-        const rewind = userRewinds.get(requestData.year);
-        if (isNil(rewind)) return;
-
-        rewind.listeners.delete(client);
+        userRewinds.forEach(rewind => {
+            rewind.listeners.delete(client);
+        });
     }
 
     public async handleEvent(message: Message<unknown>, client: Client): Promise<boolean> {
