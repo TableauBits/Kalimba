@@ -68,7 +68,6 @@ class UserModule extends Module {
 	public async createUser(userData: NewAccount): Promise<void> {
 		const user: User = {
 			uid: userData.uid,
-			email: userData.email,
 			displayName: cleanupString(userData.displayName, DISPLAY_NAME_MAX_LENGTH),
 			photoURL: userData.photoURL,
 			roles: [Role.MEMBER],
@@ -138,7 +137,6 @@ class UserModule extends Module {
 		const requestData = extractMessageData<UsrReqEditProfile>(message).userData;
 		if (isNil(requestData)
 			|| client.uid !== requestData.uid
-			|| isNil(requestData.email)
 			|| isNil(requestData.displayName)
 			|| isNil(requestData.photoURL)
 			|| isNil(requestData.description)) {
@@ -147,7 +145,6 @@ class UserModule extends Module {
 
 		const newAccount: NewAccount = {
 			uid: requestData.uid,
-			email: requestData.email,
 			displayName: requestData.displayName,
 			photoURL: requestData.photoURL
 		};

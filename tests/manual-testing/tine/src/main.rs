@@ -54,7 +54,7 @@ async fn get_id_token() -> String {
 }
 
 fn setup_ws(id_token: &str) {
-	const WS_ENDPOINT: &str = "ws://127.0.0.1:3000";
+	const WS_ENDPOINT: &str = "ws://localhost:3000";
 	let ws_client = websocket::ClientBuilder::new(WS_ENDPOINT)
 		.unwrap()
 		.connect_insecure()

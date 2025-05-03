@@ -9,9 +9,10 @@ import { inviteModule } from "./modules/invite";
 import { telemetry } from "./modules/telemetry";
 import { userModule } from "./modules/user";
 import { createMessage } from "./utility";
+import { rewindModule } from "./modules/rewind";
 
 // Telemetry HAS to be first!
-const modules: Module[] = [telemetry, userModule, constitutionModule, inviteModule];
+const modules: Module[] = [telemetry, userModule, constitutionModule, inviteModule, rewindModule];
 const clients: Client[] = [];
 
 function decodeMessage<T>(eventData: string): Message<T> | undefined {
