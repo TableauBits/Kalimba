@@ -8,6 +8,7 @@ import { cleanupString, FS_CONSTITUTIONS_PATH } from "../utility";
 import { GradeVoteModule } from "./vote-modules/grade";
 import { VoteModule } from "./vote-modules/vote";
 import { FavoriteModule } from "./favorite";
+import { GuessesModule } from "./guess";
 
 const SONG_NAME_LENGTH = 100;	// TODO
 const SONG_AUTHOR_LENGTH = 100;
@@ -22,6 +23,7 @@ export class SongModule extends SubModule<Constitution> {
 
 	private voteSubmodule: VoteModule;
 	private favoritesSubmodule: FavoriteModule;
+	private guessesSubmodule: GuessesModule;
 
 	constructor(private constitution: Constitution) {
 		super();
@@ -33,6 +35,7 @@ export class SongModule extends SubModule<Constitution> {
 		this.path = `${FS_CONSTITUTIONS_PATH}/${constitution.id}/songs`;
 
 		this.favoritesSubmodule = new FavoriteModule(this.constitution, this.songs);
+		this.guessesSubmodule = new GuessesModule({ constitution: this.constitution, songs: this.songs });
 		switch (constitution.type) {
 			case ConstitutionType.GRADE:
 			default: {
@@ -77,6 +80,10 @@ export class SongModule extends SubModule<Constitution> {
 			return this.favoritesSubmodule.handleEvent(message, client);
 		}
 
+		if (message.event.startsWith(`CST-${this.prefix}-${this.guessesSubmodule.prefix}`)) {
+			return this.guessesSubmodule.handleEvent(message, client);
+		}
+
 		const eventCallback = this.moduleMap.get(message.event);
 		if (eventCallback === undefined) {
 			return false;
@@ -95,6 +102,7 @@ export class SongModule extends SubModule<Constitution> {
 		this.constitution = constitution;
 		this.voteSubmodule.updateData({ constitution: constitution, songs: this.songs });
 		this.favoritesSubmodule.updateData({ constitution: constitution, songs: this.songs });
+		this.guessesSubmodule.updateData({ constitution: constitution, songs: this.songs });
 	}
 
 	private nextSongId(): number {
@@ -154,6 +162,7 @@ export class SongModule extends SubModule<Constitution> {
 
 		this.voteSubmodule.deleteSong(song.id);
 		this.favoritesSubmodule.deleteFavorites(song.id);
+		this.guessesSubmodule.deleteSong(song.id);
 
 		firestore.collection(this.path).doc(song.id.toString()).delete();
 	}
