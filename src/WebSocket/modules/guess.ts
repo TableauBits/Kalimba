@@ -108,7 +108,7 @@ export class GuessesModule extends SubModule<SongData> {
 		this.listeners.get(client.uid)?.add(client);
 		const userData = this.userDatas.get(client.uid);
 		if (isNil(userData)) return;
-		client.socket.send(createMessage<GuessResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: userData }));
+		client.socket.send(createMessage<GuessResUserDataUpdate>(EventType.CST_SONG_GUESS_update, { status: "added", userData: userData }));
 	}
 
 	private async getAll(_: Message<unknown>, client: Client): Promise<void> {
@@ -117,7 +117,7 @@ export class GuessesModule extends SubModule<SongData> {
 		for (const [user, data] of this.userDatas) {
 			this.listeners.get(user)?.add(client);
 
-			client.socket.send(createMessage<GuessResUserDataUpdate>(EventType.CST_SONG_GRADE_userdata_update, { status: "added", userData: data }));
+			client.socket.send(createMessage<GuessResUserDataUpdate>(EventType.CST_SONG_GUESS_update, { status: "added", userData: data }));
 		}
 	}
 
