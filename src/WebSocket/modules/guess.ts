@@ -94,7 +94,7 @@ export class GuessesModule extends SubModule<SongData> {
 
 		const song = this.data.songs.get(guess.songId);
 		if (isNil(song)) return;
-		if (song.user === client.uid) return;		// An user can't guess for his own songs
+		if (song.user === client.uid) return;		// A user can't guess for his own songs
 
 		if (!this.data.constitution.users.includes(guess.guess)) return;
 
