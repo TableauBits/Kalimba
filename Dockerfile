@@ -1,7 +1,7 @@
 # example run command:
 # docker run -p 3000:3000 [--rm --it] <name|ID>
 
-FROM node:alpine
+FROM node:22-alpine
 
 WORKDIR /kalimba
 COPY . /kalimba
