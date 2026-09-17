@@ -44,6 +44,7 @@ export class GuessesModule extends SubModule<SongData> {
 
 						case "removed":
 							this.userDatas.delete(changeData.uid);
+							this.listeners.delete(changeData.uid);
 							break;
 					}
 
