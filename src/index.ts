@@ -11,7 +11,7 @@ const isProd = process.env["ENVIRONMENT"] === "PRODUCTION";
 
 // create HTTP server
 const port = parseInt(process.env["PORT"] || "3000");
-const listenIP = isProd ? "0.0.0.0" : "localhost";
+const listenIP = isProd ? "0.0.0.0" : "127.0.0.1";
 const server = createEndpoints(
 	express()
 		.use(cors())

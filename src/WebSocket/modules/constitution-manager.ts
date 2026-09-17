@@ -167,6 +167,8 @@ class ConstitutionManagerModule extends Module {
 			} break;
 		}
 
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/guess/${client.uid}`).create({ uid: client.uid, values: {} });
+
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitution.id}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
 	}
@@ -225,6 +227,7 @@ class ConstitutionManagerModule extends Module {
 			} break;
 		}
 
+		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/guess/${client.uid}`).create({ uid: client.uid, values: {} });
 		firestore.doc(`${FS_CONSTITUTIONS_PATH}/${constitutionID}/favs/${client.uid}`).create({ uid: client.uid, favs: [] });
 		telemetry.write(false);
     
